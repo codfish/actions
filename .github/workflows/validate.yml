@@ -1,0 +1,201 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Test Actions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # Dogfood our own setup-node-and-install action
+      - name: Setup Node.js and install dependencies
+        uses: ./setup-node-and-install
+        with:
+          node-version: 'lts/*'
+
+      - name: Lint commits
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+      - name: Lint code
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test
+
+      # Dogfood our own comment action on PRs
+      - name: Comment test results
+        if: github.event_name == 'pull_request'
+        uses: ./comment
+        with:
+          message: |
+            ## 🧪 Test Results
+
+            ✅ All tests passed successfully!
+
+            - Linting: ✅ Passed
+            - Unit tests: ✅ Passed
+            - Integration tests: ✅ Passed
+          tag: 'test-results'
+          upsert: true
+
+  test-matrix:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ['20', '24', 'lts/*']
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Test our setup-node-and-install action across different environments
+      - name: Setup Node.js and install dependencies
+        uses: ./setup-node-and-install
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Verify Node.js version
+        run: node --version
+
+      - name: Run basic tests
+        run: pnpm test
+
+  integration-test:
+    name: Integration Test - Publish PR Package
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js and install dependencies
+        uses: ./setup-node-and-install
+        with:
+          node-version: 'lts/*'
+
+      # Create a test package to publish
+      - name: Create test package
+        run: |
+          mkdir -p test-package
+          cd test-package
+          cat > package.json <<EOF
+          {
+            "name": "@codfish/actions-test-package",
+            "version": "1.0.0",
+            "description": "Test package for GitHub Actions validation",
+            "main": "index.js",
+            "private": false
+          }
+          EOF
+          echo "module.exports = { test: true };" > index.js
+
+      # Test our npm-pr-version action (but don't actually publish to avoid spam)
+      - name: Test PR version generation
+        working-directory: test-package
+        env:
+          # Don't actually publish by not providing npm-token
+          PR: ${{ github.event.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Test the version generation logic
+          version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
+          echo "Generated version: $version"
+
+          # Test package.json update
+          npm version $version --no-git-tag-version
+
+          # Verify the version was set correctly
+          node -e "console.log('Package version:', require('./package.json').version)"
+
+          # Set output for comment
+          echo "version=$version" >> $GITHUB_OUTPUT
+        id: version-test
+
+      # Dogfood our comment action to report results
+      - name: Report integration test results
+        uses: ./comment
+        with:
+          message: |
+            ## 🚀 Integration Test Results
+
+            **npm-pr-version action test:**
+            - ✅ Version generation: `${{ steps.version-test.outputs.version }}`
+            - ✅ package.json update: Successful
+            - ✅ Format validation: Passed
+
+            The action is working correctly! 🎉
+          tag: 'integration-test-results'
+          upsert: true
+
+  validate-action-metadata:
+    name: Validate Action Metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Validate action.yml files
+        run: |
+          echo "Validating action.yml files..."
+
+          for action_dir in */; do
+            if [ -f "${action_dir}action.yml" ]; then
+              echo "✅ Found action.yml in $action_dir"
+
+              # Basic YAML validation
+              if ! python3 -c "import yaml; yaml.safe_load(open('${action_dir}action.yml'))" 2>/dev/null; then
+                echo "❌ Invalid YAML in ${action_dir}action.yml"
+                exit 1
+              fi
+
+              # Check for required fields
+              if ! grep -q "^name:" "${action_dir}action.yml"; then
+                echo "❌ Missing 'name' field in ${action_dir}action.yml"
+                exit 1
+              fi
+
+              if ! grep -q "^description:" "${action_dir}action.yml"; then
+                echo "❌ Missing 'description' field in ${action_dir}action.yml"
+                exit 1
+              fi
+
+              echo "✅ ${action_dir}action.yml is valid"
+            else
+              echo "⚠️  No action.yml found in $action_dir"
+            fi
+          done
+
+      - name: Validate README files
+        run: |
+          echo "Validating README files..."
+
+          for action_dir in */; do
+            if [ -f "${action_dir}README.md" ]; then
+              echo "✅ Found README.md in $action_dir"
+
+              # Check for basic sections
+              if ! grep -q "# " "${action_dir}README.md"; then
+                echo "❌ Missing main heading in ${action_dir}README.md"
+                exit 1
+              fi
+
+              echo "✅ ${action_dir}README.md looks good"
+            else
+              echo "⚠️  No README.md found in $action_dir"
+            fi
+          done

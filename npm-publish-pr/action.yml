@@ -1,0 +1,104 @@
+name: npm-pr-version
+
+description: Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) and automatically comments on PR
+
+inputs:
+  npm-token:
+    required: false
+    description: Registry authentication token with publish permissions (works with npm/yarn/pnpm)
+  github-token:
+    required: true
+    description: GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN)
+
+outputs:
+  version:
+    description: Generated PR-specific version number (0.0.0-PR-{number}--{short-sha})
+    value: '${{ steps.publish.outputs.version }}'
+
+runs:
+  using: composite
+
+  steps:
+    - name: Validate and publish to registry
+      id: publish
+      shell: bash
+      run: |
+        # Validate package.json exists
+        if [ ! -f "package.json" ]; then
+          echo "❌ ERROR: package.json not found in current directory"
+          echo "Make sure you're running this action in a directory with a package.json file"
+          exit 1
+        fi
+        
+        # Validate package.json is valid JSON
+        if ! jq empty package.json 2>/dev/null; then
+          echo "❌ ERROR: package.json is not valid JSON"
+          exit 1
+        fi
+        
+        # Check if package has a name
+        package_name=$(jq -r '.name // empty' package.json)
+        if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
+          echo "❌ ERROR: package.json must have a 'name' field"
+          exit 1
+        fi
+        
+        # Detect package manager
+        if [ -f "./yarn.lock" ]; then
+          package_manager="yarn"
+          echo "📦 Detected package manager: yarn"
+        elif [ -f "./pnpm-lock.yaml" ]; then
+          package_manager="pnpm"
+          echo "📦 Detected package manager: pnpm"
+        else
+          package_manager="npm"
+          echo "📦 Detected package manager: npm"
+        fi
+        
+        # Generate version
+        version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
+        echo "📦 Publishing $package_name@$version with $package_manager"
+        
+        # Update package.json version (all package managers support npm version)
+        if ! npm version $version --no-git-tag-version; then
+          echo "❌ ERROR: Failed to update package version"
+          exit 1
+        fi
+        
+        # Publish package based on detected package manager
+        case "$package_manager" in
+          "yarn")
+            if ! yarn publish --access public --tag pr --new-version $version --no-git-tag-version; then
+              echo "❌ ERROR: Failed to publish package with yarn"
+              echo "Make sure you have a valid npm token and publish permissions"
+              exit 1
+            fi
+            ;;
+          "pnpm")
+            if ! pnpm publish --access public --tag pr; then
+              echo "❌ ERROR: Failed to publish package with pnpm"
+              echo "Make sure you have a valid npm token and publish permissions"
+              exit 1
+            fi
+            ;;
+          *)
+            if ! npm publish --access public --tag pr; then
+              echo "❌ ERROR: Failed to publish package with npm"
+              echo "Make sure you have a valid npm token and publish permissions"
+              exit 1
+            fi
+            ;;
+        esac
+        
+        echo "✅ Successfully published $package_name@$version using $package_manager"
+        echo "version=$version" >> $GITHUB_OUTPUT
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+        PR: ${{ github.event.number }}
+        SHA: ${{ github.event.pull_request.head.sha }}
+
+    - uses: ../comment
+      with:
+        message: '🚀 PR version published: \`${{ steps.publish.outputs.version }}\`'
+        upsert: true
+        tag: npm-publish-pr

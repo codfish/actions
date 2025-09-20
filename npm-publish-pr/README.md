@@ -1,0 +1,118 @@
+# npm-pr-version
+
+Publishes packages with PR-specific version numbers for testing in downstream applications before merging. Automatically
+detects your package manager (npm, yarn, or pnpm) and uses the appropriate publish command. The action generates
+versions in the format `0.0.0-PR-{number}--{short-sha}` and automatically comments on the pull request with the
+published version.
+
+**Key Features:**
+
+- Automatic package manager detection (npm/yarn/pnpm)
+- Automatic PR version generation
+- Publishes to registry with `pr` tag
+- Automatic PR commenting with version info
+- No git history modification
+
+<!-- DOCTOC SKIP -->
+
+## Usage
+
+See [action.yml](action.yml).
+
+```yaml
+steps:
+  - uses: actions/checkout@v5
+
+  - uses: codfish/actions/setup-node-and-install@main
+    with:
+      node-version: lts/*
+
+  - run: npm run build
+
+  - uses: codfish/actions/npm-pr-version@main
+    with:
+      npm-token: ${{ secrets.NPM_TOKEN }}
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## Complete Workflow Example
+
+```yaml
+name: PR Package Testing
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  publish-pr-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: codfish/actions/setup-node-and-install@main
+        with:
+          node-version: 'lts/*'
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish PR package
+        uses: codfish/actions/npm-pr-version@main
+        with:
+          npm-token: ${{ secrets.NPM_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        id: publish
+
+      - name: Test installation
+        run: |
+          echo "Published version: ${{ steps.publish.outputs.version }}"
+          npm install my-package@${{ steps.publish.outputs.version }}
+```
+
+## Testing Downstream
+
+After the action runs, you can install the PR version in downstream projects:
+
+```bash
+npm install my-package@0.0.0-PR-123--abc1234
+```
+
+The package is published under the `pr` tag, so it won't interfere with your regular releases.
+
+## Inputs
+
+| Input          | Description                                                                         | Required | Default |
+| -------------- | ----------------------------------------------------------------------------------- | -------- | ------- |
+| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | No\*     | -       |
+| `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes      | -       |
+
+\*npm-token is technically optional but required for private registries or scoped packages
+
+## Package Manager Support
+
+The action automatically detects your package manager and uses the appropriate publish command:
+
+- **npm**: Uses `npm publish --access public --tag pr`
+- **yarn**: Uses `yarn publish --access public --tag pr --new-version {version} --no-git-tag-version`
+- **pnpm**: Uses `pnpm publish --access public --tag pr`
+
+Detection is based on lockfile presence:
+
+- `yarn.lock` → yarn
+- `pnpm-lock.yaml` → pnpm
+- `package-lock.json` or no lockfile → npm
+
+## Outputs
+
+| Output    | Description                                                                       |
+| --------- | --------------------------------------------------------------------------------- |
+| `version` | The generated PR-specific version number (format: 0.0.0-PR-{number}--{short-sha}) |
+
+## Version Format
+
+Published versions follow the pattern: `0.0.0-PR-{pr-number}--{short-sha}`
+
+Examples:
+
+- `0.0.0-PR-123--abc1234` (PR #123, commit abc1234)
+- `0.0.0-PR-456--def5678` (PR #456, commit def5678)

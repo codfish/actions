@@ -1,0 +1,49 @@
+{
+  "name": "@codfish/actions",
+  "type": "module",
+  "description": "Composite GitHub Actions for my projects.",
+  "author": "Chris O'Donnell <chris@codfish.dev>",
+  "license": "MIT",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "volta": {
+    "node": "24.8.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{json,css,md}\" --config ./node_modules/@codfish/eslint-config/prettier.js",
+    "test": "tests/scripts/test-runner.sh",
+    "test:integration": "tests/scripts/test-runner.sh integration",
+    "test:unit": "tests/scripts/test-runner.sh unit",
+    "docs:generate": "node bin/generate-docs.js",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@codfish/eslint-config": "^12.0.1",
+    "bats": "^1.10.0",
+    "doctoc": "^2.2.1",
+    "eslint": "^9.35.0",
+    "husky": "^9.1.7",
+    "js-yaml": "^4.1.0",
+    "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2"
+  },
+  "packageManager": "pnpm@10.17.0",
+  "commitlint": {
+    "extends": [
+      "./node_modules/@codfish/eslint-config/commitlint.js"
+    ]
+  },
+  "lint-staged": {
+    "*.{json,css}": [
+      "prettier --write --config ./node_modules/@codfish/eslint-config/prettier.js"
+    ],
+    "*.md": [
+      "prettier --write --config ./node_modules/@codfish/eslint-config/prettier.js",
+      "doctoc --title '## Table of Contents'"
+    ]
+  }
+}

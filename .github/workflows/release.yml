@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - alpha
+      - beta
+      - canary
+      - next
+      - next-major
+      - '[0-9]+.x'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./setup-node-and-install
+        with:
+          node-version: lts/*
+
+      - name: validate before release
+        run: |
+          pnpm install
+          pnpm lint
+          pnpm test
+        env:
+          CI: true
+
+      - name: semantic release
+        uses: docker://ghcr.io/codfish/semantic-release-action@sha256:5d5447090feb2f9252aac2825ef14e244ecf53528fbe87d585b459adb547b914
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

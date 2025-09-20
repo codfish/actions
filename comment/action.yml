@@ -1,0 +1,102 @@
+name: comment
+
+description: Creates or updates a comment in a pull request with optional tagging for upsert functionality
+
+inputs:
+  message:
+    description: The comment message content (supports markdown formatting)
+    required: true
+  tag:
+    description: Unique identifier to find and update existing comments (required when upsert is true)
+    required: false
+  upsert:
+    description: Update existing comment with matching tag instead of creating new comment
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+
+  steps:
+    - name: Validate inputs and set globals
+      id: globals
+      shell: bash
+      run: |
+        # Validate required inputs
+        if [ -z "${{ inputs.message }}" ]; then
+          echo "❌ ERROR: 'message' input is required"
+          exit 1
+        fi
+
+        # Validate upsert logic
+        if [ "${{ inputs.upsert }}" = "true" ] && [ -z "${{ inputs.tag }}" ]; then
+          echo "❌ ERROR: 'tag' input is required when upsert is true"
+          exit 1
+        fi
+
+        # Create dynamic tag based on repository name
+        repo_namespace="${{ github.repository }}"
+        tag="<!-- ${repo_namespace}/comment ${{ inputs.tag }} -->"
+        body=$(printf '${{ inputs.message }}')
+
+        echo "💬 Comment tag: $tag"
+        echo "tag=$tag" >> $GITHUB_OUTPUT
+        echo "body<<EOF"$'\n'"$body"'\n'"$tag"$'\n'EOF >> "$GITHUB_OUTPUT"
+
+    - name: Check existing comments
+      id: check-comments
+      if: inputs.upsert == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existingComment = comments.data.find(comment => comment.body.includes('${{ steps.globals.outputs.tag }}'));
+            core.setOutput('comment-id', existingComment ? existingComment.id : null);
+
+            if (existingComment) {
+              console.log(`Found existing comment with ID: ${existingComment.id}`);
+            } else {
+              console.log('No existing comment found, will create new one');
+            }
+          } catch (error) {
+            core.setFailed(`Failed to check existing comments: ${error.message}`);
+          }
+
+    - name: Update existing comment
+      if: steps.check-comments.outputs.comment-id != null
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ steps.check-comments.outputs.comment-id }},
+              body: `${{ steps.globals.outputs.body }}`,
+            });
+            console.log('✅ Successfully updated existing comment');
+          } catch (error) {
+            core.setFailed(`Failed to update comment: ${error.message}`);
+          }
+
+    - name: Create new comment
+      if: steps.check-comments.outputs.comment-id == null
+      uses: actions/github-script@v7
+      with:
+        script: |
+          try {
+            const response = await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `${{ steps.globals.outputs.body }}`,
+            });
+            console.log(`✅ Successfully created new comment with ID: ${response.data.id}`);
+          } catch (error) {
+            core.setFailed(`Failed to create comment: ${error.message}`);
+          }

@@ -1,0 +1,13 @@
+{
+  "name": "test-package",
+  "version": "1.2.3",
+  "description": "Test package for action testing",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Building...'",
+    "test": "echo 'Testing...'"
+  },
+  "keywords": ["test"],
+  "author": "test",
+  "license": "MIT"
+}
