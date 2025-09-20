@@ -35,18 +35,17 @@ uses: codfish/actions/{action-name}@feature-branch
 ## Available Actions
 
 <!-- start action docs -->
-
 ### [comment](./comment/)
 
 Creates or updates a comment in a pull request with optional tagging for upsert functionality
 
 **Inputs:**
 
-| Input     | Description                                                                           | Required | Default |
-| --------- | ------------------------------------------------------------------------------------- | -------- | ------- |
-| `message` | The comment message content (supports markdown formatting)                            | Yes      | -       |
-| `tag`     | Unique identifier to find and update existing comments (required when upsert is true) | No       | -       |
-| `upsert`  | Update existing comment with matching tag instead of creating new comment             | No       | `false` |
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `message` | The comment message content (supports markdown formatting) | Yes | - |
+| `tag` | Unique identifier to find and update existing comments (required when upsert is true) | No | - |
+| `upsert` | Update existing comment with matching tag instead of creating new comment | No | `false`  |
 
 **Usage:**
 
@@ -61,20 +60,19 @@ Creates or updates a comment in a pull request with optional tagging for upsert 
 
 ### [npm-pr-version](./npm-publish-pr/)
 
-Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) and
-automatically comments on PR
+Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) and automatically comments on PR
 
 **Inputs:**
 
-| Input          | Description                                                                         | Required | Default |
-| -------------- | ----------------------------------------------------------------------------------- | -------- | ------- |
-| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | No       | -       |
-| `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes      | -       |
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `npm-token` | Registry authentication token with publish permissions (works with npm/yarn/pnpm) | No | - |
+| `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes | - |
 
 **Outputs:**
 
-| Output    | Description                                                           |
-| --------- | --------------------------------------------------------------------- |
+| Output | Description |
+|--------|-------------|
 | `version` | Generated PR-specific version number (0.0.0-PR-{number}--{short-sha}) |
 
 **Usage:**
@@ -97,17 +95,16 @@ steps:
 
 ### [setup-node-and-install](./setup-node-and-install/)
 
-Sets up Node.js environment and installs dependencies with automatic package manager detection (npm/pnpm/yarn),
-intelligent caching, and .nvmrc/.node-version support
+Sets up Node.js environment and installs dependencies with automatic package manager detection (npm/pnpm/yarn), intelligent caching, and .nvmrc/.node-version support
 
 **Inputs:**
 
-| Input               | Description                                                                                           | Required | Default |
-| ------------------- | ----------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `node-version`      | Node.js version to install (e.g. '24', 'lts/\*'). Defaults to .nvmrc or .node-version file if present | No       | -       |
-| `cache-key-suffix`  | Additional suffix for cache key to enable multiple caches per workflow                                | No       | -       |
-| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install                                           | No       | -       |
-| `working-directory` | Directory containing package.json and lockfile                                                        | No       | `.`     |
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `node-version` | Node.js version to install (e.g. '24', 'lts/*'). Defaults to .nvmrc or .node-version file if present | No | - |
+| `cache-key-suffix` | Additional suffix for cache key to enable multiple caches per workflow | No | - |
+| `install-options` | Extra command-line options to pass to npm/pnpm/yarn install | No | - |
+| `working-directory` | Directory containing package.json and lockfile | No | `.`  |
 
 **Usage:**
 
@@ -123,7 +120,6 @@ steps:
 
   - run: npm test
 ```
-
 <!-- end action docs -->
 
 ## Contributing
