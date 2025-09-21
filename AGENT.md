@@ -16,6 +16,8 @@ This project uses **pnpm** as the package manager. All commands should use pnpm:
 - Install dependencies: `pnpm install`
 - Run tests: `pnpm test`
 - Run linting: `pnpm lint`
+- Format code: `pnpm format`
+- Generate documentation: `pnpm docs:generate`
 - Run specific test types: `pnpm test:integration`, `pnpm test:unit`
 
 ## Action Structure
@@ -36,6 +38,14 @@ This project uses **pnpm** as the package manager. All commands should use pnpm:
 - Use comprehensive input validation with clear error messages
 - Include proper error handling and informative logging
 
+## Security Best Practices
+
+- **File Operations**: Use file descriptors (`fs.openSync()`, `fs.readSync()`, `fs.writeSync()`) instead of file names
+  (`fs.readFileSync()`, `fs.writeFileSync()`) to prevent TOCTOU (Time-of-Check-Time-of-Use) vulnerabilities
+- **Resource Management**: Always close file descriptors in `finally` blocks to prevent resource leaks
+- **Atomic Operations**: Keep file descriptors open during entire read-modify-write operations to prevent race
+  conditions
+
 ## Current Actions
 
 - `npm-pr-version` - Publishes packages with PR-specific version numbers using detected package manager (npm/yarn/pnpm)
@@ -54,6 +64,39 @@ The project includes comprehensive testing infrastructure:
 - **Multi-platform testing**: Ubuntu, Windows, macOS support
 
 Run tests with: `pnpm test`
+
+## Documentation System
+
+### Automated Documentation Generation
+
+- Run `pnpm docs:generate` to update all documentation
+- The script automatically:
+  1. Updates main README.md with action overview using `<!-- start action docs -->` / `<!-- end action docs -->` markers
+  2. Updates individual action README files with inputs/outputs tables using `<!-- start inputs -->` /
+     `<!-- end inputs -->` and `<!-- start outputs -->` / `<!-- end outputs -->` markers
+  3. Runs prettier formatting on all updated documentation
+
+### Documentation Markers
+
+- **Main README.md**: Uses `<!-- start action docs -->` and `<!-- end action docs -->` for the Available Actions section
+- **Action README files**: Uses `<!-- start inputs -->` / `<!-- end inputs -->` for inputs tables and
+  `<!-- start outputs -->` / `<!-- end outputs -->` for outputs tables
+- **CRITICAL: NEVER EDIT AUTO-GENERATED CONTENT**: Never modify content between ANY HTML comment markers in README
+  files:
+  - `<!-- START doctoc generated TOC please keep comment here to allow auto update -->` and
+    `<!-- END doctoc generated TOC please keep comment here to allow auto update -->` (doctoc table of contents)
+  - `<!-- start action docs -->` and `<!-- end action docs -->` (main README action documentation)
+  - `<!-- start inputs -->` and `<!-- end inputs -->` (action inputs tables)
+  - `<!-- start outputs -->` and `<!-- end outputs -->` (action outputs tables)
+  - Any other `<!-- ... -->` comment markers - they indicate auto-generated content
+- All content outside these markers is manually maintained and can be edited
+
+### Workflow Automation
+
+- `.github/workflows/update-docs.yml` automatically runs on changes to `*/action.yml` or `bin/generate-docs.js`
+- Uses `stefanzweifel/git-auto-commit-action` to commit documentation changes
+- Handles both main README.md and all action README files
+- Automatically formats all documentation using prettier
 
 ## Security
 
