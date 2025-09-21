@@ -73,6 +73,12 @@ The project includes comprehensive testing infrastructure:
 
 Run tests with: `pnpm test`
 
+**Cross-Platform Notes:**
+
+- Test scripts use `bash` prefix for Windows compatibility
+- All npm scripts should work on Windows, macOS, and Linux
+- Bats tests require bash to be available (included in Git for Windows)
+
 ## Documentation System
 
 ### Automated Documentation Generation
@@ -98,6 +104,8 @@ Run tests with: `pnpm test`
   - `<!-- start outputs -->` and `<!-- end outputs -->` (action outputs tables)
   - Any other `<!-- ... -->` comment markers - they indicate auto-generated content
 - All content outside these markers is manually maintained and can be edited
+- **Prettier Protection**: Doctoc blocks are wrapped in `<!-- prettier-ignore-start -->` and
+  `<!-- prettier-ignore-end -->` to prevent formatting
 
 ### Workflow Automation
 

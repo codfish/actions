@@ -6,7 +6,7 @@
   "license": "MIT",
   "version": "1.0.0",
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "volta": {
     "node": "24.8.0"
@@ -15,9 +15,9 @@
     "lint": "eslint .",
     "fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{json,css,md}\" --config ./node_modules/@codfish/eslint-config/prettier.js",
-    "test": "tests/scripts/test-runner.sh",
-    "test:integration": "tests/scripts/test-runner.sh integration",
-    "test:unit": "tests/scripts/test-runner.sh unit",
+    "test": "bash tests/scripts/test-runner.sh",
+    "test:integration": "bash tests/scripts/test-runner.sh integration",
+    "test:unit": "bash tests/scripts/test-runner.sh unit",
     "docs:generate": "node bin/generate-docs.js",
     "prepare": "husky"
   },
