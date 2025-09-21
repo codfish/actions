@@ -1,6 +1,8 @@
 name: setup-node-and-install
 
-description: Sets up Node.js environment and installs dependencies with automatic package manager detection (npm/pnpm/yarn), intelligent caching, and .nvmrc/.node-version support
+description:
+  Sets up Node.js environment and installs dependencies with automatic package manager detection (npm/pnpm/yarn),
+  intelligent caching, and .nvmrc/.node-version support
 
 inputs:
   node-version:
@@ -133,7 +135,9 @@ runs:
         registry-url: 'https://registry.npmjs.org'
 
     - name: Read .node-version file
-      if: ${{ inputs.node-version == '' && hashFiles(format('{0}/.nvmrc', inputs.working-directory)) == '' && hashFiles(format('{0}/.node-version', inputs.working-directory)) != '' }}
+      if:
+        ${{ inputs.node-version == '' && hashFiles(format('{0}/.nvmrc', inputs.working-directory)) == '' &&
+        hashFiles(format('{0}/.node-version', inputs.working-directory)) != '' }}
       id: read-node-version
       working-directory: ${{ inputs.working-directory }}
       shell: bash
@@ -143,7 +147,9 @@ runs:
         echo "📋 Read Node version from .node-version: $node_version"
 
     - name: Setup node with .node-version
-      if: ${{ inputs.node-version == '' && hashFiles(format('{0}/.nvmrc', inputs.working-directory)) == '' && hashFiles(format('{0}/.node-version', inputs.working-directory)) != '' }}
+      if:
+        ${{ inputs.node-version == '' && hashFiles(format('{0}/.nvmrc', inputs.working-directory)) == '' &&
+        hashFiles(format('{0}/.node-version', inputs.working-directory)) != '' }}
       uses: actions/setup-node@v5
       id: setup-node-alt
       with:

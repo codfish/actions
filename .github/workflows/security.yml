@@ -18,11 +18,11 @@ jobs:
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
-    
+
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript']
+        language: [javascript]
 
     steps:
       - name: Checkout repository
@@ -40,17 +40,17 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{matrix.language}}"
+          category: '/language:${{matrix.language}}'
 
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        
+
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
@@ -60,21 +60,21 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        
+
       - name: Setup Node.js and install dependencies
         uses: ./setup-node-and-install
         with:
           node-version: 'lts/*'
-          
+
       - name: Run pnpm audit
         run: |
           echo "Running security audit..."
           pnpm audit --audit-level=moderate
-          
+
       - name: Check for known vulnerabilities
         run: |
           echo "Checking for high/critical vulnerabilities..."
@@ -89,13 +89,13 @@ jobs:
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          
+
       - name: Run TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
         with:
