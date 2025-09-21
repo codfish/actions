@@ -24,7 +24,8 @@ This project uses **pnpm** as the package manager. All commands should use pnpm:
 
 **IMPORTANT**: Always run the appropriate command after making file changes:
 
-- **For JS/TS/TSX/JSX/YML/YAML files**: Run `pnpm fix` to apply ESLint fixes
+- **For JS/TS/TSX/JSX/YML/YAML files**: Run `pnpm fix` to apply ESLint fixes (CRITICAL for YAML files to prevent
+  formatting issues)
 - **For JSON/MD/CSS files**: Run `pnpm format` to apply Prettier formatting
 - **When in doubt**: Run both commands in sequence
 

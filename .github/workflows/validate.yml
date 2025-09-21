@@ -50,7 +50,7 @@ jobs:
             - Linting: ✅ Passed
             - Unit tests: ✅ Passed
             - Integration tests: ✅ Passed
-          tag: 'test-results'
+          tag: test-results
           upsert: true
 
   test-matrix:
@@ -146,7 +146,7 @@ jobs:
             - ✅ Format validation: Passed
 
             The action is working correctly! 🎉
-          tag: 'integration-test-results'
+          tag: integration-test-results
           upsert: true
 
   validate-action-metadata:
