@@ -59,6 +59,7 @@ This project uses **pnpm** as the package manager. All commands should use pnpm:
 - `npm-pr-version` - Publishes packages with PR-specific version numbers using detected package manager (npm/yarn/pnpm)
   for testing in downstream apps before merging
 - `comment` - Creates or updates pull request comments with intelligent upsert functionality using unique tags
+  - **IMPORTANT**: Any job using the comment action must include `permissions: pull-requests: write`
 - `setup-node-and-install` - Sets up Node.js environment and installs dependencies with automatic package manager
   detection, intelligent caching, and .nvmrc/.node-version support
 

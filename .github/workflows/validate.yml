@@ -11,6 +11,9 @@ jobs:
     name: Test Actions
     runs-on: ubuntu-latest
 
+    permissions:
+      pull-requests: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -79,6 +82,9 @@ jobs:
     name: Integration Test - Publish PR Package
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+
+    permissions:
+      pull-requests: write
 
     steps:
       - name: Checkout repository
