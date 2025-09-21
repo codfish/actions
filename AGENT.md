@@ -120,6 +120,8 @@ The project implements multiple security measures:
 
 - **Dependabot**: Automated dependency updates
 - **CodeQL**: Static security analysis
-- **Secret scanning**: TruffleHog for committed secrets
+- **Secret scanning**: TruffleHog for committed secrets (uses default behavior without base/head commits for better
+  compatibility)
 - **Vulnerability auditing**: Regular pnpm audit checks
-- **Dependency review**: Security checks on PRs
+- **Note**: Dependency review requires GitHub Advanced Security (available free on public repos, paid feature for
+  private repos)

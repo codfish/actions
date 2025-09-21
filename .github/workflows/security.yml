@@ -78,7 +78,8 @@ jobs:
       - name: Check for known vulnerabilities
         run: |
           echo "Checking for high/critical vulnerabilities..."
-          if pnpm audit --audit-level=high --json | jq '.summary.high + .summary.critical' | grep -v '^0$'; then
+          count=$(pnpm audit --audit-level=high --json | jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical')
+          if [ "$count" -gt 0 ]; then
             echo "❌ High or critical vulnerabilities found!"
             pnpm audit --audit-level=high
             exit 1
@@ -99,7 +100,4 @@ jobs:
       - name: Run TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
         with:
-          path: ./
-          base: main
-          head: HEAD
           extra_args: --debug --only-verified
