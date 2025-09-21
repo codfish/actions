@@ -1,19 +1,6 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-## Table of Contents
-
-- [AGENT.md](#agentmd)
-  - [Project Overview](#project-overview)
-  - [Package Manager](#package-manager)
-  - [Action Structure](#action-structure)
-  - [Development Guidelines](#development-guidelines)
-  - [Current Actions](#current-actions)
-  - [Testing](#testing)
-  - [Security](#security)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 # AGENT.md
+
+<!-- DOCTOC SKIP -->
 
 This file provides guidance to AI agents when working with code in this repository.
 

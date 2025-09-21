@@ -273,18 +273,120 @@ class DocumentationGenerator {
   }
 
   /**
+   * Update individual action README files with inputs/outputs
+   */
+  updateActionReadmes() {
+    const actionDirs = this.findActionDirectories();
+    let updatedCount = 0;
+
+    actionDirs.forEach(dirName => {
+      const readmePath = path.join(this.rootDir, dirName, 'README.md');
+      
+      if (!fs.existsSync(readmePath)) {
+        console.log(`⚠️  No README.md found in ${dirName}, skipping`);
+        return;
+      }
+
+      const actionData = this.parseActionFile(dirName);
+      if (!actionData) {
+        console.log(`⚠️  Could not parse action.yml for ${dirName}, skipping`);
+        return;
+      }
+
+      let content = fs.readFileSync(readmePath, 'utf8');
+      let modified = false;
+
+      // Update inputs section
+      const inputsStartMarker = '<!-- start inputs -->';
+      const inputsEndMarker = '<!-- end inputs -->';
+      const inputsStart = content.indexOf(inputsStartMarker);
+      const inputsEnd = content.indexOf(inputsEndMarker);
+
+      if (inputsStart !== -1 && inputsEnd !== -1 && inputsEnd > inputsStart) {
+        const inputsTable = this.generateTable(actionData.inputs, 'inputs');
+        const beforeInputs = content.substring(0, inputsStart + inputsStartMarker.length);
+        const afterInputs = content.substring(inputsEnd);
+        content = beforeInputs + '\n\n' + inputsTable + '\n\n' + afterInputs;
+        modified = true;
+        console.log(`✅ Updated inputs section in ${dirName}/README.md`);
+      }
+
+      // Update outputs section
+      const outputsStartMarker = '<!-- start outputs -->';
+      const outputsEndMarker = '<!-- end outputs -->';
+      const outputsStart = content.indexOf(outputsStartMarker);
+      const outputsEnd = content.indexOf(outputsEndMarker);
+
+      if (outputsStart !== -1 && outputsEnd !== -1 && outputsEnd > outputsStart) {
+        const outputsTable = this.generateTable(actionData.outputs, 'outputs');
+        const beforeOutputs = content.substring(0, outputsStart + outputsStartMarker.length);
+        const afterOutputs = content.substring(outputsEnd);
+        content = beforeOutputs + '\n\n' + outputsTable + '\n\n' + afterOutputs;
+        modified = true;
+        console.log(`✅ Updated outputs section in ${dirName}/README.md`);
+      }
+
+      if (modified) {
+        fs.writeFileSync(readmePath, content, 'utf8');
+        updatedCount++;
+      }
+    });
+
+    return updatedCount;
+  }
+
+  /**
+   * Run prettier formatting on all documentation files
+   */
+  async formatDocs() {
+    const { execSync } = await import('child_process');
+    
+    try {
+      console.log('\n🎨 Formatting documentation with prettier...');
+      execSync('pnpm format', { 
+        stdio: 'inherit',
+        cwd: this.rootDir 
+      });
+      console.log('✅ Documentation formatting complete!');
+      return true;
+    } catch (error) {
+      console.error('❌ Prettier formatting failed:', error.message);
+      return false;
+    }
+  }
+
+  /**
    * Run the documentation generation
    */
-  run() {
+  async run() {
     console.log('🔍 Scanning for GitHub Actions...');
 
-    const success = this.updateReadme();
+    // Update main README
+    const mainSuccess = this.updateReadme();
+    
+    // Update individual action READMEs
+    console.log('\n🔍 Updating individual action README files...');
+    const updatedActionCount = this.updateActionReadmes();
 
-    if (success) {
-      console.log('\n📚 Documentation generation complete!');
-      console.log('Run `git diff README.md` to see the changes.');
+    if (mainSuccess) {
+      console.log(`\n📚 Documentation generation complete!`);
+      console.log(`📝 Updated main README.md with ${this.actions.length} actions`);
+      if (updatedActionCount > 0) {
+        console.log(`📝 Updated ${updatedActionCount} action README files`);
+      }
+      
+      // Format the documentation
+      const formatSuccess = await this.formatDocs();
+      
+      if (formatSuccess) {
+        console.log('\n🎉 All documentation updated and formatted successfully!');
+        console.log('Run `git diff` to see all changes.');
+      } else {
+        console.log('\n⚠️  Documentation updated but formatting failed.');
+        console.log('You may want to run `pnpm format` manually.');
+      }
     } else {
-      console.error('\n❌ Documentation generation failed!');
+      console.error('\n❌ Main README documentation generation failed!');
       process.exit(1);
     }
   }

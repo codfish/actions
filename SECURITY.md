@@ -1,33 +1,32 @@
+# Security Policy
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
 
-- [Security Policy](#security-policy)
-  - [Supported Versions](#supported-versions)
-  - [Reporting a Vulnerability](#reporting-a-vulnerability)
-    - [🔒 Private Disclosure](#-private-disclosure)
-    - [📋 What to Include](#-what-to-include)
-    - [🕐 Response Timeline](#-response-timeline)
-  - [Security Best Practices for Users](#security-best-practices-for-users)
-    - [🔐 Secrets Management](#-secrets-management)
-    - [🏷️ Action Versioning](#-action-versioning)
-    - [🔍 Workflow Permissions](#-workflow-permissions)
-    - [🛡️ Input Validation](#-input-validation)
-  - [Security Features](#security-features)
-    - [🔒 Automated Security Scanning](#-automated-security-scanning)
-    - [🛡️ Secure Development Practices](#-secure-development-practices)
-    - [🔍 Supply Chain Security](#-supply-chain-security)
-  - [Known Security Considerations](#known-security-considerations)
-    - [GitHub Actions Environment](#github-actions-environment)
-    - [npm Publishing (npm-pr-version)](#npm-publishing-npm-pr-version)
-    - [Comment Actions](#comment-actions)
-  - [Incident Response](#incident-response)
-  - [Security Contact](#security-contact)
-  - [Acknowledgments](#acknowledgments)
+- [Supported Versions](#supported-versions)
+- [Reporting a Vulnerability](#reporting-a-vulnerability)
+  - [🔒 Private Disclosure](#-private-disclosure)
+  - [📋 What to Include](#-what-to-include)
+  - [🕐 Response Timeline](#-response-timeline)
+- [Security Best Practices for Users](#security-best-practices-for-users)
+  - [🔐 Secrets Management](#-secrets-management)
+  - [🏷️ Action Versioning](#-action-versioning)
+  - [🔍 Workflow Permissions](#-workflow-permissions)
+  - [🛡️ Input Validation](#-input-validation)
+- [Security Features](#security-features)
+  - [🔒 Automated Security Scanning](#-automated-security-scanning)
+  - [🛡️ Secure Development Practices](#-secure-development-practices)
+  - [🔍 Supply Chain Security](#-supply-chain-security)
+- [Known Security Considerations](#known-security-considerations)
+  - [GitHub Actions Environment](#github-actions-environment)
+  - [npm Publishing (npm-pr-version)](#npm-publishing-npm-pr-version)
+  - [Comment Actions](#comment-actions)
+- [Incident Response](#incident-response)
+- [Security Contact](#security-contact)
+- [Acknowledgments](#acknowledgments)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-# Security Policy
 
 ## Supported Versions
 
@@ -41,7 +40,7 @@ This project follows a rolling release model. We provide security updates for:
 
 ## Reporting a Vulnerability
 
-We take security vulnerabilities seriously. If you discover a security issue, please follow these steps:
+If you discover a security issue, please follow these steps:
 
 ### 🔒 Private Disclosure
 
@@ -55,7 +54,7 @@ Instead, please report security issues privately using one of these methods:
    - Fill out the form with details
 
 2. **Email**
-   - Send details to: [security@codfish.dev](mailto:security@codfish.dev)
+   - Send details to: [chris@codfish.dev](mailto:chris@codfish.dev)
    - Include "SECURITY" in the subject line
 
 ### 📋 What to Include
@@ -101,8 +100,7 @@ When using these GitHub Actions in your workflows:
 
 ### 🏷️ Action Versioning
 
-- **Pin to specific versions** for production workflows
-- **Use semantic version tags** when available
+- **Pin to specific versions or commit hashes** for production workflows
 - **Avoid using `@main`** in production (use for testing only)
 
 ```yaml
@@ -160,7 +158,6 @@ This project implements several security measures:
 - **Minimal dependencies** to reduce attack surface
 - **Regular dependency updates** via Dependabot
 - **Verified action references** in workflows
-- **Reproducible builds** using lockfiles
 
 ## Known Security Considerations
 

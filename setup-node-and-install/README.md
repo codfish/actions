@@ -80,12 +80,16 @@ When multiple version specification methods are present, the action uses this pr
 
 ## Inputs
 
+<!-- start inputs -->
+
 | Input               | Description                                                                                           | Required | Default |
 | ------------------- | ----------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `node-version`      | Node.js version to install (e.g. '18', 'lts/\*'). Defaults to .nvmrc or .node-version file if present | No       | -       |
-| `cache-key-suffix`  | Additional suffix for cache key to enable multiple caches per workflow                                | No       | `""`    |
-| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install                                           | No       | `""`    |
+| `node-version`      | Node.js version to install (e.g. '24', 'lts/\*'). Defaults to .nvmrc or .node-version file if present | No       | -       |
+| `cache-key-suffix`  | Additional suffix for cache key to enable multiple caches per workflow                                | No       | -       |
+| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install                                           | No       | -       |
 | `working-directory` | Directory containing package.json and lockfile                                                        | No       | `.`     |
+
+<!-- end inputs -->
 
 ## Package Manager Detection
 
