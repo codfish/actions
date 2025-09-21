@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-load "../../scripts/test-helpers"
+load "../../scripts/test-helpers.sh"
 
 setup() {
     setup_github_env

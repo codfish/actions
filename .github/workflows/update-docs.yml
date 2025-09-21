@@ -5,27 +5,27 @@ on:
     branches: [main]
     paths:
       - '*/action.yml'
-      - '*/README.md'
-      - 'bin/generate-docs.js'
+      - bin/generate-docs.js
 
 permissions:
   contents: write
 
 jobs:
   update-docs:
-    name: Auto-update README.md
+    name: Auto-update documentation
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          # Use a PAT or default token with write permissions
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # Dogfood our own setup-node-and-install action
       - name: Setup Node.js and install dependencies
         uses: ./setup-node-and-install
+        with:
+          node-version: 'lts/*'
 
       - name: Generate updated documentation
         run: pnpm docs:generate
@@ -33,5 +33,6 @@ jobs:
       - name: Commit and push changes if any
         uses: stefanzweifel/git-auto-commit-action@v6
         with:
-          commit_options: '--no-verify --signoff'
-          commit_message: 'docs: 🤖 auto-update README.md with latest action documentation'
+          commit_options: --no-verify --signoff
+          commit_message: 'docs: auto-update documentation with latest action metadata'
+          file_pattern: 'README.md */README.md'

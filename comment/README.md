@@ -19,11 +19,15 @@ See [action.yml](action.yml).
 
 ## Inputs
 
+<!-- start inputs -->
+
 | Input     | Description                                                                           | Required | Default |
 | --------- | ------------------------------------------------------------------------------------- | -------- | ------- |
 | `message` | The comment message content (supports markdown formatting)                            | Yes      | -       |
 | `tag`     | Unique identifier to find and update existing comments (required when upsert is true) | No       | -       |
 | `upsert`  | Update existing comment with matching tag instead of creating new comment             | No       | `false` |
+
+<!-- end inputs -->
 
 ## Examples
 

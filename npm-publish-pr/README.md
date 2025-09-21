@@ -39,9 +39,12 @@ steps:
 
 ```yaml
 name: PR Package Testing
-on:
-  pull_request:
-    types: [opened, synchronize]
+
+on: pull_request_target
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   publish-pr-package:
@@ -61,12 +64,6 @@ jobs:
         with:
           npm-token: ${{ secrets.NPM_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-        id: publish
-
-      - name: Test installation
-        run: |
-          echo "Published version: ${{ steps.publish.outputs.version }}"
-          npm install my-package@${{ steps.publish.outputs.version }}
 ```
 
 ## Testing Downstream
@@ -81,12 +78,14 @@ The package is published under the `pr` tag, so it won't interfere with your reg
 
 ## Inputs
 
+<!-- start inputs -->
+
 | Input          | Description                                                                         | Required | Default |
 | -------------- | ----------------------------------------------------------------------------------- | -------- | ------- |
-| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | No\*     | -       |
+| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | No       | -       |
 | `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes      | -       |
 
-\*npm-token is technically optional but required for private registries or scoped packages
+<!-- end inputs -->
 
 ## Package Manager Support
 
@@ -104,9 +103,13 @@ Detection is based on lockfile presence:
 
 ## Outputs
 
-| Output    | Description                                                                       |
-| --------- | --------------------------------------------------------------------------------- |
-| `version` | The generated PR-specific version number (format: 0.0.0-PR-{number}--{short-sha}) |
+<!-- start outputs -->
+
+| Output    | Description                                                           |
+| --------- | --------------------------------------------------------------------- |
+| `version` | Generated PR-specific version number (0.0.0-PR-{number}--{short-sha}) |
+
+<!-- end outputs -->
 
 ## Version Format
 

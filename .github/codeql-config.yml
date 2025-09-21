@@ -1,4 +1,4 @@
-name: "GitHub Actions Security Analysis"
+name: GitHub Actions Security Analysis
 
 disable-default-queries: false
 
@@ -8,14 +8,14 @@ queries:
 
 paths-ignore:
   - tests/
-  - "**/*.test.js"
-  - "**/*.spec.js"
-  - "**/node_modules"
-  - "**/dist"
-  - "**/build"
+  - '**/*.test.js'
+  - '**/*.spec.js'
+  - '**/node_modules'
+  - '**/dist'
+  - '**/build'
 
 paths:
-  - "**/*.js"
-  - "**/*.yml"
-  - "**/*.yaml"
-  - "**/*.json"
+  - '**/*.js'
+  - '**/*.yml'
+  - '**/*.yaml'
+  - '**/*.json'

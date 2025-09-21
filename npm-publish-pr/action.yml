@@ -1,6 +1,8 @@
 name: npm-pr-version
 
-description: Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) and automatically comments on PR
+description:
+  Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) and
+  automatically comments on PR
 
 inputs:
   npm-token:
@@ -29,20 +31,20 @@ runs:
           echo "Make sure you're running this action in a directory with a package.json file"
           exit 1
         fi
-        
+
         # Validate package.json is valid JSON
         if ! jq empty package.json 2>/dev/null; then
           echo "❌ ERROR: package.json is not valid JSON"
           exit 1
         fi
-        
+
         # Check if package has a name
         package_name=$(jq -r '.name // empty' package.json)
         if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
           echo "❌ ERROR: package.json must have a 'name' field"
           exit 1
         fi
-        
+
         # Detect package manager
         if [ -f "./yarn.lock" ]; then
           package_manager="yarn"
@@ -54,17 +56,17 @@ runs:
           package_manager="npm"
           echo "📦 Detected package manager: npm"
         fi
-        
+
         # Generate version
         version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
         echo "📦 Publishing $package_name@$version with $package_manager"
-        
+
         # Update package.json version (all package managers support npm version)
         if ! npm version $version --no-git-tag-version; then
           echo "❌ ERROR: Failed to update package version"
           exit 1
         fi
-        
+
         # Publish package based on detected package manager
         case "$package_manager" in
           "yarn")
@@ -89,7 +91,7 @@ runs:
             fi
             ;;
         esac
-        
+
         echo "✅ Successfully published $package_name@$version using $package_manager"
         echo "version=$version" >> $GITHUB_OUTPUT
       env:

@@ -11,6 +11,9 @@ jobs:
     name: Test Actions
     runs-on: ubuntu-latest
 
+    permissions:
+      pull-requests: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -24,7 +27,9 @@ jobs:
           node-version: 'lts/*'
 
       - name: Lint commits
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+        run:
+          npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+          --verbose
 
       - name: Lint code
         run: pnpm lint
@@ -45,7 +50,7 @@ jobs:
             - Linting: ✅ Passed
             - Unit tests: ✅ Passed
             - Integration tests: ✅ Passed
-          tag: 'test-results'
+          tag: test-results
           upsert: true
 
   test-matrix:
@@ -77,6 +82,9 @@ jobs:
     name: Integration Test - Publish PR Package
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+
+    permissions:
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -133,12 +141,12 @@ jobs:
             ## 🚀 Integration Test Results
 
             **npm-pr-version action test:**
-            - ✅ Version generation: `${{ steps.version-test.outputs.version }}`
+            - ✅ Version generation: ${{ steps.version-test.outputs.version }}
             - ✅ package.json update: Successful
             - ✅ Format validation: Passed
 
             The action is working correctly! 🎉
-          tag: 'integration-test-results'
+          tag: integration-test-results
           upsert: true
 
   validate-action-metadata:
