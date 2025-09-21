@@ -20,6 +20,14 @@ This project uses **pnpm** as the package manager. All commands should use pnpm:
 - Generate documentation: `pnpm docs:generate`
 - Run specific test types: `pnpm test:integration`, `pnpm test:unit`
 
+## Code Quality Workflow
+
+**IMPORTANT**: Always run the appropriate command after making file changes:
+
+- **For JS/TS/TSX/JSX/YML/YAML files**: Run `pnpm fix` to apply ESLint fixes
+- **For JSON/MD/CSS files**: Run `pnpm format` to apply Prettier formatting
+- **When in doubt**: Run both commands in sequence
+
 ## Action Structure
 
 - Action names: lowercase kebab-case (e.g., `npm-publish-pr`)
