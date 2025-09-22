@@ -99,7 +99,7 @@ runs:
         PR: ${{ github.event.number }}
         SHA: ${{ github.event.pull_request.head.sha }}
 
-    - uses: ../comment
+    - uses: codfish/actions/comment@main
       with:
         message: '🚀 PR version published: \`${{ steps.publish.outputs.version }}\`'
         upsert: true
