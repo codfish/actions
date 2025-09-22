@@ -8,6 +8,7 @@
   "engines": {
     "node": ">=20"
   },
+  "private": false,
   "volta": {
     "node": "24.8.0"
   },
@@ -22,13 +23,13 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@codfish/eslint-config": "^12.1.0",
+    "@codfish/eslint-config": "12.1.0",
     "bats": "^1.10.0",
     "doctoc": "^2.2.1",
     "eslint": "^9.36.0",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.0",
-    "lint-staged": "^16.1.6",
+    "lint-staged": "^16.2.0",
     "prettier": "^3.6.2"
   },
   "packageManager": "pnpm@10.17.0",
