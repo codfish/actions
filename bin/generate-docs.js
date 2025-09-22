@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
-import path from 'path';
 import yaml from 'js-yaml';
+import path from 'path';
 
 /**
  * Generate documentation for all GitHub Actions in the repository
@@ -45,7 +45,7 @@ class DocumentationGenerator {
         description: actionData.description || 'No description available',
         inputs: actionData.inputs || {},
         outputs: actionData.outputs || {},
-        rawData: actionData
+        rawData: actionData,
       };
     } catch (error) {
       console.error(`Error parsing ${actionFile}:`, error.message);
@@ -73,7 +73,7 @@ class DocumentationGenerator {
         // Look for any yaml code block with "uses: "
         /```yaml\n([\s\S]*?uses:\s*[.\w/-]+[\s\S]*?)\n```/i,
         // Look for specific action usage
-        new RegExp(`\`\`\`yaml\\n([\\s\\S]*?uses:\\s*[^\\n]*${dirName}[\\s\\S]*?)\\n\`\`\``, 'i')
+        new RegExp(`\`\`\`yaml\\n([\\s\\S]*?uses:\\s*[^\\n]*${dirName}[\\s\\S]*?)\\n\`\`\``, 'i'),
       ];
 
       for (const pattern of patterns) {
@@ -93,7 +93,6 @@ class DocumentationGenerator {
 
       // Fallback: create a basic example based on inputs
       return this.generateBasicExample(dirName);
-
     } catch (error) {
       console.error(`Error reading README for ${dirName}:`, error.message);
       return this.generateBasicExample(dirName);
@@ -140,13 +139,9 @@ class DocumentationGenerator {
       return `*No ${type}*`;
     }
 
-    const headers = type === 'inputs'
-      ? '| Input | Description | Required | Default |'
-      : '| Output | Description |';
+    const headers = type === 'inputs' ? '| Input | Description | Required | Default |' : '| Output | Description |';
 
-    const separator = type === 'inputs'
-      ? '|-------|-------------|----------|---------|'
-      : '|--------|-------------|';
+    const separator = type === 'inputs' ? '|-------|-------------|----------|---------|' : '|--------|-------------|';
 
     let table = `${headers}\n${separator}`;
 
@@ -196,7 +191,7 @@ class DocumentationGenerator {
    */
   generateAvailableActionsContent() {
     const actionDirs = this.findActionDirectories();
-    
+
     console.log(`Found ${actionDirs.length} action directories:`, actionDirs);
 
     this.actions = actionDirs
@@ -205,7 +200,7 @@ class DocumentationGenerator {
       .sort((a, b) => a.name.localeCompare(b.name));
 
     let content = '';
-    
+
     this.actions.forEach(action => {
       content += this.generateActionSection(action);
     });
@@ -228,7 +223,7 @@ class DocumentationGenerator {
     try {
       // Open file descriptor for reading and writing
       fd = fs.openSync(readmePath, 'r+');
-      
+
       // Read content using file descriptor
       const stats = fs.fstatSync(fd);
       const buffer = Buffer.alloc(stats.size);
@@ -238,22 +233,22 @@ class DocumentationGenerator {
       // Find the action docs markers
       const startMarker = '<!-- start action docs -->';
       const endMarker = '<!-- end action docs -->';
-      
+
       const startIndex = content.indexOf(startMarker);
       const endIndex = content.indexOf(endMarker);
-      
+
       if (startIndex === -1) {
         console.error(`Could not find "${startMarker}" in README.md`);
         console.error('Please add the marker where you want action documentation to be generated');
         return false;
       }
-      
+
       if (endIndex === -1) {
         console.error(`Could not find "${endMarker}" in README.md`);
         console.error('Please add the end marker after the start marker');
         return false;
       }
-      
+
       if (endIndex <= startIndex) {
         console.error('End marker must come after start marker');
         return false;
@@ -262,7 +257,7 @@ class DocumentationGenerator {
       // Replace content between markers
       const beforeMarker = content.substring(0, startIndex + startMarker.length);
       const afterMarker = content.substring(endIndex);
-      
+
       const newContent = this.generateAvailableActionsContent();
       const updatedContent = beforeMarker + '\n' + newContent + '\n' + afterMarker;
 
@@ -274,7 +269,6 @@ class DocumentationGenerator {
       console.log(`📝 Generated documentation for ${this.actions.length} actions`);
 
       return true;
-
     } catch (error) {
       console.error('Error updating README.md:', error.message);
       return false;
@@ -299,7 +293,7 @@ class DocumentationGenerator {
 
     actionDirs.forEach(dirName => {
       const readmePath = path.join(this.rootDir, dirName, 'README.md');
-      
+
       if (!fs.existsSync(readmePath)) {
         console.log(`⚠️  No README.md found in ${dirName}, skipping`);
         return;
@@ -315,7 +309,7 @@ class DocumentationGenerator {
       try {
         // Open file descriptor for reading and writing
         fd = fs.openSync(readmePath, 'r+');
-        
+
         // Read content using file descriptor
         const stats = fs.fstatSync(fd);
         const buffer = Buffer.alloc(stats.size);
@@ -359,7 +353,6 @@ class DocumentationGenerator {
           fs.writeSync(fd, content, 0, 'utf8');
           updatedCount++;
         }
-
       } catch (error) {
         console.error(`Error updating ${dirName}/README.md:`, error.message);
       } finally {
@@ -382,12 +375,12 @@ class DocumentationGenerator {
    */
   async formatDocs() {
     const { execSync } = await import('child_process');
-    
+
     try {
       console.log('\n🎨 Formatting documentation with prettier...');
-      execSync('pnpm format', { 
+      execSync('pnpm format', {
         stdio: 'inherit',
-        cwd: this.rootDir 
+        cwd: this.rootDir,
       });
       console.log('✅ Documentation formatting complete!');
       return true;
@@ -405,7 +398,7 @@ class DocumentationGenerator {
 
     // Update main README
     const mainSuccess = this.updateReadme();
-    
+
     // Update individual action READMEs
     console.log('\n🔍 Updating individual action README files...');
     const updatedActionCount = this.updateActionReadmes();
@@ -416,10 +409,10 @@ class DocumentationGenerator {
       if (updatedActionCount > 0) {
         console.log(`📝 Updated ${updatedActionCount} action README files`);
       }
-      
+
       // Format the documentation
       const formatSuccess = await this.formatDocs();
-      
+
       if (formatSuccess) {
         console.log('\n🎉 All documentation updated and formatted successfully!');
         console.log('Run `git diff` to see all changes.');
