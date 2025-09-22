@@ -1,55 +1,44 @@
+# Contributing to codfish/actions
+
+Thank you for your interest in contributing! This document provides guidelines for contributing to this repository.
+
+<!-- prettier-ignore-start -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-## Table of Contents
-
-- [Contributing to GitHub Actions Collection](#contributing-to-github-actions-collection)
-  - [Table of Contents](#table-of-contents)
-  - [Code of Conduct](#code-of-conduct)
-  - [Getting Started](#getting-started)
-  - [Development Workflow](#development-workflow)
-    - [1. Create a Branch](#1-create-a-branch)
-    - [2. Make Your Changes](#2-make-your-changes)
-    - [3. Test Your Changes](#3-test-your-changes)
-    - [4. Commit Your Changes](#4-commit-your-changes)
-  - [Action Development Guidelines](#action-development-guidelines)
-    - [Directory Structure](#directory-structure)
-    - [Action Naming](#action-naming)
-    - [Action Definition (action.yml)](#action-definition-actionyml)
-    - [Implementation Guidelines](#implementation-guidelines)
-    - [Error Handling](#error-handling)
-    - [Package Manager Detection](#package-manager-detection)
-  - [Testing](#testing)
-    - [Test Structure](#test-structure)
-    - [Writing Tests](#writing-tests)
-    - [Running Tests](#running-tests)
-  - [Documentation](#documentation)
-    - [README Structure](#readme-structure)
-    - [Documentation Updates](#documentation-updates)
-    - [Auto-Generated Documentation](#auto-generated-documentation)
-  - [Submitting Changes](#submitting-changes)
-    - [Pull Request Process](#pull-request-process)
-    - [PR Requirements](#pr-requirements)
-    - [Review Process](#review-process)
-  - [Action Ideas](#action-ideas)
-  - [Getting Help](#getting-help)
-  - [Recognition](#recognition)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-# Contributing to GitHub Actions Collection
-
-Thank you for your interest in contributing! This document provides guidelines for contributing to this GitHub Actions
-collection.
-
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [Development Workflow](#development-workflow)
+  - [1. Create a Branch](#1-create-a-branch)
+  - [2. Make Your Changes](#2-make-your-changes)
+  - [3. Test Your Changes](#3-test-your-changes)
+  - [4. Commit Your Changes](#4-commit-your-changes)
 - [Action Development Guidelines](#action-development-guidelines)
+  - [Directory Structure](#directory-structure)
+  - [Action Naming](#action-naming)
+  - [Action Definition (action.yml)](#action-definition-actionyml)
+  - [Implementation Guidelines](#implementation-guidelines)
+  - [Error Handling](#error-handling)
+  - [Package Manager Detection](#package-manager-detection)
 - [Testing](#testing)
+  - [Test Structure](#test-structure)
+  - [Writing Tests](#writing-tests)
+  - [Running Tests](#running-tests)
 - [Documentation](#documentation)
+  - [README Structure](#readme-structure)
+  - [Documentation Updates](#documentation-updates)
+  - [Auto-Generated Documentation](#auto-generated-documentation)
 - [Submitting Changes](#submitting-changes)
+  - [Pull Request Process](#pull-request-process)
+  - [PR Requirements](#pr-requirements)
+  - [Review Process](#review-process)
+- [Action Ideas](#action-ideas)
+- [Getting Help](#getting-help)
+- [Recognition](#recognition)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+<!-- prettier-ignore-end -->
 
 ## Code of Conduct
 
@@ -59,7 +48,7 @@ to uphold this code.
 ## Getting Started
 
 1. **Fork the repository** and clone it locally
-2. **Install dependencies**: `npm install`
+2. **Install dependencies**: `pnpm install`
 3. **Set up your development environment**:
    ```bash
    # Install act for local testing (optional but recommended)
@@ -86,14 +75,14 @@ Follow the [Action Development Guidelines](#action-development-guidelines) below
 
 ```bash
 # Run all tests
-npm test
+pnpm test
 
 # Run specific test types
-npm run test:integration
-npm run test:unit
+pnpm test:integration
+pnpm test:unit
 
 # Run linting
-npm run lint
+pnpm lint
 ```
 
 ### 4. Commit Your Changes
@@ -225,7 +214,7 @@ Example test:
 
 ```bash
 # All tests
-npm test
+pnpm test
 
 # Specific action tests
 ./tests/scripts/test-runner.sh integration
