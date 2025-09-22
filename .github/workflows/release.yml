@@ -11,12 +11,23 @@ on:
       - next-major
       - '[0-9]+.x'
 
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
 
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
+
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: ./setup-node-and-install
         with:

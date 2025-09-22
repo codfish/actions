@@ -25,7 +25,7 @@
     "@codfish/eslint-config": "^12.1.0",
     "bats": "^1.10.0",
     "doctoc": "^2.2.1",
-    "eslint": "^9.35.0",
+    "eslint": "^9.36.0",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.0",
     "lint-staged": "^16.1.6",
