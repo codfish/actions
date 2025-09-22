@@ -4,11 +4,13 @@
   "description": "Composite GitHub Actions for my projects.",
   "author": "Chris O'Donnell <chris@codfish.dev>",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "0.0.0-semantically-released",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20"
   },
-  "private": false,
   "volta": {
     "node": "24.8.0"
   },
