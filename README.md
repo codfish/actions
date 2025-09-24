@@ -30,8 +30,10 @@ uses: codfish/actions/{action-name}@main
 For specific versions or branches:
 
 ```yaml
-uses: codfish/actions/{action-name}@v1.0.0
+uses: codfish/actions/{action-name}@v1
+uses: codfish/actions/{action-name}@v1.0.1
 uses: codfish/actions/{action-name}@feature-branch
+uses: codfish/actions/{action-name}@aff1a9d
 ```
 
 ## Available Actions
@@ -153,7 +155,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: codfish/actions/setup-node-and-install@main
+      - uses: codfish/actions/setup-node-and-install@v1
         with:
           node-version: 'lts/*'
 
@@ -163,19 +165,19 @@ jobs:
       - name: Build package
         run: npm run build
 
-      - uses: codfish/actions/comment@main
+      - uses: codfish/actions/comment@v1
         with:
           message: '⏳ Publishing PR version...'
           tag: 'pr-publish-status'
           upsert: true
 
-      - uses: codfish/actions/npm-pr-version@main
+      - uses: codfish/actions/npm-pr-version@v1
         with:
           npm-token: ${{ secrets.NPM_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
         id: publish
 
-      - uses: codfish/actions/comment@main
+      - uses: codfish/actions/comment@v1
         with:
           message: |
             ✅ **PR package published successfully!**
