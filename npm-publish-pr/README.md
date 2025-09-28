@@ -35,6 +35,26 @@ steps:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+### Disable PR Comments
+
+```yaml
+- uses: codfish/actions/npm-pr-version@main
+  with:
+    npm-token: ${{ secrets.NPM_TOKEN }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    comment: false
+```
+
+### Custom Comment Tag
+
+```yaml
+- uses: codfish/actions/npm-pr-version@main
+  with:
+    npm-token: ${{ secrets.NPM_TOKEN }}
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    comment-tag: my-custom-tag
+```
+
 ## Complete Workflow Example
 
 ```yaml
@@ -80,10 +100,12 @@ The package is published under the `pr` tag, so it won't interfere with your reg
 
 <!-- start inputs -->
 
-| Input          | Description                                                                         | Required | Default |
-| -------------- | ----------------------------------------------------------------------------------- | -------- | ------- |
-| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | No       | -       |
-| `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes      | -       |
+| Input          | Description                                                                         | Required | Default          |
+| -------------- | ----------------------------------------------------------------------------------- | -------- | ---------------- |
+| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | No       | -                |
+| `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes      | -                |
+| `comment`      | Whether to comment on the PR with the published version (true/false)                | No       | `true`           |
+| `comment-tag`  | Tag to use for PR comments (for comment identification and updates)                 | No       | `npm-publish-pr` |
 
 <!-- end inputs -->
 
@@ -105,9 +127,11 @@ Detection is based on lockfile presence:
 
 <!-- start outputs -->
 
-| Output    | Description                                                           |
-| --------- | --------------------------------------------------------------------- |
-| `version` | Generated PR-specific version number (0.0.0-PR-{number}--{short-sha}) |
+| Output          | Description                                                           |
+| --------------- | --------------------------------------------------------------------- |
+| `version`       | Generated PR-specific version number (0.0.0-PR-{number}--{short-sha}) |
+| `package-name`  | Package name from package.json                                        |
+| `error-message` | Error message if publish fails                                        |
 
 <!-- end outputs -->
 

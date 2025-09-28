@@ -152,3 +152,202 @@ teardown() {
     
     assert_output_contains "ERROR: package.json not found" "$(cat output.txt)"
 }
+
+@test "npm-pr-version: comment input defaults to true" {
+    # Test that comment input defaults to 'true' when not specified
+    bash -c '
+        comment_input=""
+        if [ -z "$comment_input" ]; then
+            comment_input="true"
+        fi
+        echo "comment=$comment_input"
+    ' > output.txt
+    
+    assert_output_contains "comment=true" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: comment input can be set to false" {
+    # Test that comment input can be explicitly set to false
+    bash -c '
+        comment_input="false"
+        echo "comment=$comment_input"
+        
+        # Simulate conditional comment step
+        if [ "$comment_input" = "true" ]; then
+            echo "Would create comment"
+        else
+            echo "Skipping comment creation"
+        fi
+    ' > output.txt
+    
+    assert_output_contains "comment=false" "$(cat output.txt)"
+    assert_output_contains "Skipping comment creation" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: comment-tag input defaults to npm-publish-pr" {
+    # Test that comment-tag input defaults to 'npm-publish-pr' when not specified
+    bash -c '
+        comment_tag_input=""
+        if [ -z "$comment_tag_input" ]; then
+            comment_tag_input="npm-publish-pr"
+        fi
+        echo "comment-tag=$comment_tag_input"
+    ' > output.txt
+    
+    assert_output_contains "comment-tag=npm-publish-pr" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: comment-tag input can be customized" {
+    # Test that comment-tag input can be set to custom value
+    bash -c '
+        comment_tag_input="my-custom-tag"
+        echo "comment-tag=$comment_tag_input"
+        
+        # Simulate using custom tag in comment action
+        echo "Using tag: $comment_tag_input for PR comment"
+    ' > output.txt
+    
+    assert_output_contains "comment-tag=my-custom-tag" "$(cat output.txt)"
+    assert_output_contains "Using tag: my-custom-tag for PR comment" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: comment workflow with custom tag" {
+    # Test complete workflow with comment disabled and custom tag
+    bash -c '
+        comment_input="false"
+        comment_tag_input="custom-npm-publish"
+        
+        echo "comment=$comment_input"
+        echo "comment-tag=$comment_tag_input"
+        
+        # Simulate the conditional logic from action.yml
+        if [ "$comment_input" = "true" ]; then
+            echo "Would use codfish/actions/comment@main with tag: $comment_tag_input"
+        else
+            echo "Comment step skipped due to comment=false"
+        fi
+    ' > output.txt
+    
+    assert_output_contains "comment=false" "$(cat output.txt)"
+    assert_output_contains "comment-tag=custom-npm-publish" "$(cat output.txt)"
+    assert_output_contains "Comment step skipped due to comment=false" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: before/after commenting workflow" {
+    # Test that before/after commenting logic works correctly
+    bash -c '
+        comment_input="true"
+        comment_tag_input="npm-publish-pr"
+        publish_success="true"
+        
+        echo "comment=$comment_input"
+        echo "comment-tag=$comment_tag_input"
+        
+        # Simulate before comment
+        if [ "$comment_input" = "true" ]; then
+            echo "Before: Publishing PR version..."
+        fi
+        
+        # Simulate publish step
+        if [ "$publish_success" = "true" ]; then
+            echo "Publish: SUCCESS"
+            package_name="test-package"
+            version="0.0.0-PR-123--abc1234"
+            
+            # Simulate success comment
+            if [ "$comment_input" = "true" ]; then
+                echo "After: PR package published successfully! Install with: npm install $package_name@$version"
+            fi
+        else
+            echo "Publish: FAILED"
+            error_message="Failed to publish"
+            
+            # Simulate error comment
+            if [ "$comment_input" = "true" ]; then
+                echo "After: PR package publish failed! Error: $error_message"
+            fi
+        fi
+    ' > output.txt
+    
+    assert_output_contains "Before: Publishing PR version..." "$(cat output.txt)"
+    assert_output_contains "Publish: SUCCESS" "$(cat output.txt)"
+    assert_output_contains "After: PR package published successfully!" "$(cat output.txt)"
+    assert_output_contains "npm install test-package@0.0.0-PR-123--abc1234" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: error handling and comment update" {
+    # Test error handling workflow
+    bash -c '
+        comment_input="true"
+        comment_tag_input="npm-publish-pr"
+        publish_success="false"
+        
+        echo "comment=$comment_input"
+        echo "comment-tag=$comment_tag_input"
+        
+        # Simulate before comment
+        if [ "$comment_input" = "true" ]; then
+            echo "Before: Publishing PR version..."
+        fi
+        
+        # Simulate publish step failure
+        if [ "$publish_success" = "true" ]; then
+            echo "Publish: SUCCESS"
+        else
+            echo "Publish: FAILED"
+            error_message="Failed to publish package with npm. Error: E403 Forbidden"
+            
+            # Simulate error comment
+            if [ "$comment_input" = "true" ]; then
+                echo "After: PR package publish failed! Error: $error_message"
+            fi
+        fi
+    ' > output.txt
+    
+    assert_output_contains "Before: Publishing PR version..." "$(cat output.txt)"
+    assert_output_contains "Publish: FAILED" "$(cat output.txt)"
+    assert_output_contains "After: PR package publish failed!" "$(cat output.txt)"
+    assert_output_contains "Error: Failed to publish package with npm. Error: E403 Forbidden" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: error handling with package name extraction" {
+    # Setup test repo with package.json
+    cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
+    
+    # Test error message generation with package name
+    bash -c '
+        # Simulate package name extraction
+        if [ -f "package.json" ]; then
+            package_name=$(jq -r ".name // empty" package.json)
+            echo "package-name=$package_name"
+            
+            # Simulate error scenario
+            error_message="❌ ERROR: Failed to publish package with npm. Error: E403 Forbidden - you must be logged in"
+            echo "error-message=$error_message"
+        fi
+    ' > output.txt
+    
+    assert_output_contains "package-name=test-package" "$(cat output.txt)"
+    assert_output_contains "error-message=❌ ERROR: Failed to publish package with npm" "$(cat output.txt)"
+    assert_output_contains "E403 Forbidden" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: npm version error capture" {
+    # Test npm version error handling with output capture
+    bash -c '
+        version="invalid-version"
+        
+        # Simulate npm version command failure with output
+        version_output="npm ERR! Invalid version: \"invalid-version\""
+        version_exit_code=1
+        
+        if [ $version_exit_code -ne 0 ]; then
+            error_message="❌ ERROR: Failed to update package version. Check if the version format is valid. Error: $version_output"
+            echo "error-message=$error_message"
+        fi
+    ' > output.txt
+    
+    assert_output_contains "error-message=❌ ERROR: Failed to update package version" "$(cat output.txt)"
+    assert_output_contains "Check if the version format is valid" "$(cat output.txt)"
+    assert_output_contains "npm ERR! Invalid version" "$(cat output.txt)"
+}

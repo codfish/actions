@@ -11,39 +11,75 @@ inputs:
   github-token:
     required: true
     description: GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN)
+  comment:
+    required: false
+    default: 'true'
+    description: Whether to comment on the PR with the published version (true/false)
+  comment-tag:
+    required: false
+    default: npm-publish-pr
+    description: Tag to use for PR comments (for comment identification and updates)
 
 outputs:
   version:
     description: Generated PR-specific version number (0.0.0-PR-{number}--{short-sha})
     value: '${{ steps.publish.outputs.version }}'
+  package-name:
+    description: Package name from package.json
+    value: '${{ steps.publish.outputs.package-name }}'
+  error-message:
+    description: Error message if publish fails
+    value: '${{ steps.publish.outputs.error-message }}'
 
 runs:
   using: composite
 
   steps:
+    - uses: codfish/actions/comment@main
+      if: inputs.comment == 'true'
+      with:
+        message: ⏳ Publishing PR version...
+        upsert: true
+        tag: ${{ inputs.comment-tag }}
+
     - name: Validate and publish to registry
       id: publish
       shell: bash
       run: |
+        set +e  # Don't exit on error so we can handle failures
+
+        # Initialize outputs for error handling
+        error_message=""
+        package_name=""
+        version=""
+
         # Validate package.json exists
         if [ ! -f "package.json" ]; then
-          echo "❌ ERROR: package.json not found in current directory"
-          echo "Make sure you're running this action in a directory with a package.json file"
+          error_message="❌ ERROR: package.json not found in current directory. Make sure you're running this action in a directory with a package.json file"
+          echo "$error_message"
+          echo "error-message=$error_message" >> $GITHUB_OUTPUT
           exit 1
         fi
 
         # Validate package.json is valid JSON
         if ! jq empty package.json 2>/dev/null; then
-          echo "❌ ERROR: package.json is not valid JSON"
+          error_message="❌ ERROR: package.json is not valid JSON"
+          echo "$error_message"
+          echo "error-message=$error_message" >> $GITHUB_OUTPUT
           exit 1
         fi
 
         # Check if package has a name
         package_name=$(jq -r '.name // empty' package.json)
         if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
-          echo "❌ ERROR: package.json must have a 'name' field"
+          error_message="❌ ERROR: package.json must have a 'name' field"
+          echo "$error_message"
+          echo "error-message=$error_message" >> $GITHUB_OUTPUT
           exit 1
         fi
+
+        # Output package name for use in error handling
+        echo "package-name=$package_name" >> $GITHUB_OUTPUT
 
         # Detect package manager
         if [ -f "./yarn.lock" ]; then
@@ -60,47 +96,76 @@ runs:
         # Generate version
         version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
         echo "📦 Publishing $package_name@$version with $package_manager"
+        echo "version=$version" >> $GITHUB_OUTPUT
 
         # Update package.json version (all package managers support npm version)
-        if ! npm version $version --no-git-tag-version; then
-          echo "❌ ERROR: Failed to update package version"
+        version_output=$(npm version $version --no-git-tag-version 2>&1)
+        version_exit_code=$?
+        if [ $version_exit_code -ne 0 ]; then
+          error_message="❌ ERROR: Failed to update package version. Check if the version format is valid. Error: $version_output"
+          echo "$error_message"
+          echo "error-message=$error_message" >> $GITHUB_OUTPUT
           exit 1
         fi
 
         # Publish package based on detected package manager
         case "$package_manager" in
           "yarn")
-            if ! yarn publish --access public --tag pr --new-version $version --no-git-tag-version; then
-              echo "❌ ERROR: Failed to publish package with yarn"
-              echo "Make sure you have a valid npm token and publish permissions"
+            publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version 2>&1)
+            publish_exit_code=$?
+            if [ $publish_exit_code -ne 0 ]; then
+              error_message="❌ ERROR: Failed to publish package with yarn. Error: $publish_output"
+              echo "$error_message"
+              echo "error-message=$error_message" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
           "pnpm")
-            if ! pnpm publish --access public --tag pr; then
-              echo "❌ ERROR: Failed to publish package with pnpm"
-              echo "Make sure you have a valid npm token and publish permissions"
+            publish_output=$(pnpm publish --access public --tag pr 2>&1)
+            publish_exit_code=$?
+            if [ $publish_exit_code -ne 0 ]; then
+              error_message="❌ ERROR: Failed to publish package with pnpm. Error: $publish_output"
+              echo "$error_message"
+              echo "error-message=$error_message" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
           *)
-            if ! npm publish --access public --tag pr; then
-              echo "❌ ERROR: Failed to publish package with npm"
-              echo "Make sure you have a valid npm token and publish permissions"
+            publish_output=$(npm publish --access public --tag pr 2>&1)
+            publish_exit_code=$?
+            if [ $publish_exit_code -ne 0 ]; then
+              error_message="❌ ERROR: Failed to publish package with npm. Error: $publish_output"
+              echo "$error_message"
+              echo "error-message=$error_message" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
         esac
 
         echo "✅ Successfully published $package_name@$version using $package_manager"
-        echo "version=$version" >> $GITHUB_OUTPUT
       env:
         NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
         PR: ${{ github.event.number }}
         SHA: ${{ github.event.pull_request.head.sha }}
 
     - uses: codfish/actions/comment@main
+      if: failure() && inputs.comment == 'true'
       with:
-        message: '🚀 PR version published: \`${{ steps.publish.outputs.version }}\`'
+        message: |
+          ❌ **PR package publish failed!**
+
+          Error: ${{ steps.publish.outputs.error-message }}
+
+          Please check the workflow logs for more details.
         upsert: true
-        tag: npm-publish-pr
+        tag: ${{ inputs.comment-tag }}
+
+    - uses: codfish/actions/comment@main
+      if: success() && inputs.comment == 'true'
+      with:
+        message: |
+          ✅ **PR package published successfully!**
+
+          Install with: `npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}`
+        upsert: true
+        tag: ${{ inputs.comment-tag }}
