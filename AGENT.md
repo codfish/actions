@@ -127,3 +127,22 @@ The project implements multiple security measures:
 - **Vulnerability auditing**: Regular pnpm audit checks
 - **Note**: Dependency review requires GitHub Advanced Security (available free on public repos, paid feature for
   private repos)
+
+## Code Quality and File Editing Rules
+
+### Bats File Editing Rules
+
+**CRITICAL**: After editing any `.bats` file, ALWAYS check for and remove trailing spaces:
+
+1. Run: `grep -n " $" path/to/file.bats`
+2. If any trailing spaces are found, remove them immediately
+3. Bats files are NOT automatically formatted by eslint/prettier, so manual cleanup is required
+4. Trailing spaces in bats files can cause test execution issues
+
+### General File Editing Guidelines
+
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary for achieving your goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly
+  requested by the User

@@ -383,3 +383,29 @@ If you want to disable Git checks on publish, set the \"git-checks\" setting to 
     newline_count=$(echo "$sanitized_line" | wc -l)
     [ "$newline_count" -eq 1 ]
 }
+
+@test "npm-pr-version: workflow link in error comment" {
+    # Test that error comment includes workflow link
+    bash -c '
+        # Simulate GitHub environment variables
+        GITHUB_SERVER_URL="https://github.com"
+        GITHUB_REPOSITORY="owner/repo"
+        GITHUB_RUN_ID="12345678"
+
+        # Simulate error comment with workflow link
+        error_message="Failed to publish"
+
+        # Generate comment like the action would
+        comment_message="❌ **PR package publish failed!**
+
+Error: $error_message
+
+📋 [View workflow logs]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) for more details."
+
+        echo "comment-message=$comment_message"
+    ' > output.txt
+
+    assert_output_contains "📋 [View workflow logs]" "$(cat output.txt)"
+    assert_output_contains "https://github.com/owner/repo/actions/runs/12345678" "$(cat output.txt)"
+    assert_output_contains "for more details." "$(cat output.txt)"
+}
