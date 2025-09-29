@@ -17,7 +17,7 @@ teardown() {
     # Setup test repo with npm lockfile
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/lockfiles/package-lock.json" .
-    
+
     # Test enhanced package manager detection
     bash -c '
         if [ -f "./pnpm-lock.yaml" ]; then
@@ -34,7 +34,7 @@ teardown() {
             echo "lockfile-exists=false"
         fi
     ' > output.txt
-    
+
     assert_output_contains "package-manager=npm" "$(cat output.txt)"
     assert_output_contains "lockfile-exists=true" "$(cat output.txt)"
 }
@@ -43,7 +43,7 @@ teardown() {
     # Setup test repo with pnpm lockfile
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/lockfiles/pnpm-lock.yaml" .
-    
+
     # Test package manager detection (updated with yarn support)
     bash -c '
         if [ -f "./pnpm-lock.yaml" ]; then
@@ -60,7 +60,7 @@ teardown() {
             echo "lockfile-exists=false"
         fi
     ' > output.txt
-    
+
     assert_output_contains "package-manager=pnpm" "$(cat output.txt)"
     assert_output_contains "lockfile-exists=true" "$(cat output.txt)"
 }
@@ -69,7 +69,7 @@ teardown() {
     # Setup test repo with .nvmrc
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/.nvmrc" .
-    
+
     # Test nvmrc detection
     bash -c '
         if [[ ! -f "./.nvmrc" && -z "$INPUT_NODE_VERSION" ]]; then
@@ -81,7 +81,7 @@ teardown() {
             fi
         fi
     ' > output.txt
-    
+
     assert_output_contains "node-version-found=true" "$(cat output.txt)"
     assert_output_contains "nvmrc-version=18.20.0" "$(cat output.txt)"
 }
@@ -90,7 +90,7 @@ teardown() {
     # Setup test repo with yarn lockfile
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/lockfiles/yarn.lock" .
-    
+
     # Test yarn detection
     bash -c '
         if [ -f "./pnpm-lock.yaml" ]; then
@@ -107,7 +107,7 @@ teardown() {
             echo "lockfile-exists=false"
         fi
     ' > output.txt
-    
+
     assert_output_contains "package-manager=yarn" "$(cat output.txt)"
     assert_output_contains "lockfile-exists=true" "$(cat output.txt)"
 }
@@ -115,7 +115,7 @@ teardown() {
 @test "setup-node-and-install: fails when no node version specified" {
     # Setup test repo without .nvmrc or node-version input
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
-    
+
     # Test missing node version
     bash -c '
         if [[ ! -f "./.nvmrc" && -z "$INPUT_NODE_VERSION" ]]; then
@@ -123,7 +123,7 @@ teardown() {
             exit 1
         fi
     ' > output.txt 2>&1 || echo "exit-code=$?" >> output.txt
-    
+
     assert_output_contains "node-version-missing=true" "$(cat output.txt)"
 }
 
@@ -131,7 +131,7 @@ teardown() {
     # Setup test repo with .node-version
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/.node-version" .
-    
+
     # Test .node-version detection
     bash -c '
         if [[ ! -f "./.nvmrc" && ! -f "./.node-version" && -z "$INPUT_NODE_VERSION" ]]; then
@@ -143,7 +143,7 @@ teardown() {
             fi
         fi
     ' > output.txt
-    
+
     assert_output_contains "node-version-found=true" "$(cat output.txt)"
     assert_output_contains "node-version-content=20.10.0" "$(cat output.txt)"
 }
@@ -153,7 +153,7 @@ teardown() {
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/.nvmrc" .
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/.node-version" .
-    
+
     # Test priority logic
     bash -c '
         if [ -f "./.nvmrc" ] && [ -f "./.node-version" ]; then
@@ -162,7 +162,7 @@ teardown() {
             echo "node-version-file=$(cat .node-version)"
         fi
     ' > output.txt
-    
+
     assert_output_contains "Both files found, .nvmrc takes priority" "$(cat output.txt)"
     assert_output_contains "nvmrc-version=18.20.0" "$(cat output.txt)"
     assert_output_contains "node-version-file=20.10.0" "$(cat output.txt)"
@@ -176,7 +176,7 @@ teardown() {
             exit 1
         fi
     ' > output.txt 2>&1 || echo "exit-code=$?" >> output.txt
-    
+
     assert_output_contains "ERROR: package.json not found" "$(cat output.txt)"
 }
 
@@ -184,7 +184,7 @@ teardown() {
     # Setup test repo with empty .node-version
     cp "$BATS_TEST_DIRNAME/../../../tests/fixtures/package-json/valid.json" package.json
     touch .node-version  # Create empty file
-    
+
     # Test empty .node-version validation
     bash -c '
         if [ -f "./.node-version" ] && [ ! -f "./.nvmrc" ]; then
@@ -195,6 +195,6 @@ teardown() {
             fi
         fi
     ' > output.txt 2>&1 || echo "exit-code=$?" >> output.txt
-    
+
     assert_output_contains "ERROR: .node-version file is empty" "$(cat output.txt)"
 }

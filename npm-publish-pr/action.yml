@@ -53,11 +53,18 @@ runs:
         package_name=""
         version=""
 
+        # Function to sanitize error messages for GitHub output
+        sanitize_error() {
+          local message="$1"
+          # Replace newlines with spaces, remove extra whitespace, truncate if too long
+          echo "$message" | tr '\n' ' ' | tr -s ' ' | cut -c1-500
+        }
+
         # Validate package.json exists
         if [ ! -f "package.json" ]; then
           error_message="❌ ERROR: package.json not found in current directory. Make sure you're running this action in a directory with a package.json file"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -65,7 +72,7 @@ runs:
         if ! jq empty package.json 2>/dev/null; then
           error_message="❌ ERROR: package.json is not valid JSON"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -74,7 +81,7 @@ runs:
         if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
           error_message="❌ ERROR: package.json must have a 'name' field"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -104,7 +111,7 @@ runs:
         if [ $version_exit_code -ne 0 ]; then
           error_message="❌ ERROR: Failed to update package version. Check if the version format is valid. Error: $version_output"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -116,7 +123,7 @@ runs:
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with yarn. Error: $publish_output"
               echo "$error_message"
-              echo "error-message=$error_message" >> $GITHUB_OUTPUT
+              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
@@ -126,7 +133,7 @@ runs:
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with pnpm. Error: $publish_output"
               echo "$error_message"
-              echo "error-message=$error_message" >> $GITHUB_OUTPUT
+              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
@@ -136,7 +143,7 @@ runs:
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with npm. Error: $publish_output"
               echo "$error_message"
-              echo "error-message=$error_message" >> $GITHUB_OUTPUT
+              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
