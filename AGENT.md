@@ -62,7 +62,8 @@ This project uses **pnpm** as the package manager. All commands should use pnpm:
 - `comment` - Creates or updates pull request comments with intelligent upsert functionality using unique tags
   - **IMPORTANT**: Any job using the comment action must include `permissions: pull-requests: write`
 - `setup-node-and-install` - Sets up Node.js environment and installs dependencies with automatic package manager
-  detection, intelligent caching, and .nvmrc/.node-version support
+  detection, intelligent caching, and dynamic Node version detection via input, `.node-version`, `.nvmrc`, or
+  `package.json` `volta.node`. Validation is relaxed; the action no longer fails when no version is detected.
 
 ## Testing
 

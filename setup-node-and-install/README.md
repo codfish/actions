@@ -1,14 +1,14 @@
 # setup-node-and-install
 
 Sets up Node.js environment and installs dependencies with automatic package manager detection, intelligent caching, and
-.nvmrc/.node-version support.
+dynamic Node version detection via the `node-version` input, `.node-version`, `.nvmrc`, or `package.json` `volta.node`.
 
 This action provides the following functionality:
 
 - Automatically detects package manager (npm, yarn, or pnpm) from lockfiles
 - Uses GitHub's official `setup-node` action with optimized caching
 - Installs dependencies with appropriate commands based on detected package manager
-- Supports .nvmrc and .node-version files for version specification
+- Supports `.node-version`, `.nvmrc`, and `package.json` `volta.node` for version specification
 - Intelligent caching of node_modules when lockfiles are present
 
 <!-- DOCTOC SKIP -->
@@ -30,8 +30,10 @@ steps:
   - run: npm test
 ```
 
-The `node-version` input is optional. If not supplied, this action will attempt to use an `.nvmrc` file in your project.
-If neither is supplied, it will fail your workflow.
+The `node-version` input is optional. If not supplied, this action will attempt to resolve a version using, in order:
+
+1. `.node-version`, 2) `.nvmrc`, 3) `package.json` `volta.node`. If none are present, `actions/setup-node` runs without
+   an explicit version and will use its default behavior.
 
 The `cache-key-suffix` input is optional. If not supplied, no suffix will be applied to the cache key used to restore
 cache in subsequent workflow runs.
@@ -69,14 +71,15 @@ steps:
   - run: npm test
 ```
 
-## Node Version File Priority
+## Node Version Resolution Priority
 
 When multiple version specification methods are present, the action uses this priority order:
 
 1. **Input parameter** (`node-version`) - highest priority
-2. **`.nvmrc` file** - takes precedence over .node-version
-3. **`.node-version` file** - used if no .nvmrc exists
-4. **Error** - if none of the above are present
+2. **`.node-version` file**
+3. **`.nvmrc` file**
+4. **`package.json` `volta.node` property**
+5. **`actions/setup-node` default behavior** when no version is specified
 
 ## Inputs
 
