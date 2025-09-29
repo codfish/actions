@@ -90,7 +90,7 @@ When using these GitHub Actions in your workflows:
 
 ```yaml
 # ✅ Good - Using secrets properly
-- uses: codfish/actions/npm-pr-version@main
+- uses: codfish/actions/npm-pr-version@v1
   with:
     npm-token: ${{ secrets.NPM_TOKEN }}
     github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -35,7 +35,7 @@ runs:
   using: composite
 
   steps:
-    - uses: codfish/actions/comment@main
+    - uses: codfish/actions/comment@v1
       if: inputs.comment == 'true'
       with:
         message: ⏳ Publishing PR version...
@@ -148,7 +148,7 @@ runs:
         PR: ${{ github.event.number }}
         SHA: ${{ github.event.pull_request.head.sha }}
 
-    - uses: codfish/actions/comment@main
+    - uses: codfish/actions/comment@v1
       if: failure() && inputs.comment == 'true'
       with:
         message: |
@@ -160,7 +160,7 @@ runs:
         upsert: true
         tag: ${{ inputs.comment-tag }}
 
-    - uses: codfish/actions/comment@main
+    - uses: codfish/actions/comment@v1
       if: success() && inputs.comment == 'true'
       with:
         message: |

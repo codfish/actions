@@ -25,11 +25,6 @@ Reference actions using the following format:
 
 ```yaml
 uses: codfish/actions/{action-name}@main
-```
-
-For specific versions or branches:
-
-```yaml
 uses: codfish/actions/{action-name}@v1
 uses: codfish/actions/{action-name}@v1.0.1
 uses: codfish/actions/{action-name}@feature-branch
@@ -56,7 +51,7 @@ Creates or updates a comment in a pull request with optional tagging for upsert 
 
 ```yaml
 - name: Comment on PR
-  uses: codfish/actions/comment@main
+  uses: codfish/actions/comment@v1
   with:
     message: '✅ Build successful!'
     tag: 'build-status'
@@ -91,13 +86,13 @@ automatically comments on PR
 steps:
   - uses: actions/checkout@v5
 
-  - uses: codfish/actions/setup-node-and-install@main
+  - uses: codfish/actions/setup-node-and-install@v1
     with:
       node-version: lts/*
 
   - run: npm run build
 
-  - uses: codfish/actions/npm-pr-version@main
+  - uses: codfish/actions/npm-pr-version@v1
     with:
       npm-token: ${{ secrets.NPM_TOKEN }}
       github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -124,7 +119,7 @@ steps:
   - uses: actions/checkout@v5
 
   # will install latest Node v18.x
-  - uses: codfish/actions/setup-node-and-install@main
+  - uses: codfish/actions/setup-node-and-install@v1
     with:
       node-version: 18
       cache-key-suffix: '-${{ github.head_ref || github.event.release.tag_name }}'
@@ -182,7 +177,7 @@ jobs:
           if [ -d "dist" ]; then
             size=$(du -sh dist | cut -f1)
           elif [ -d "build" ]; then
-            size=$(du -sh build | cut -f1)  
+            size=$(du -sh build | cut -f1)
           elif [ -f "package.json" ]; then
             size=$(du -sh . --exclude=node_modules | cut -f1)
           else
@@ -196,8 +191,8 @@ jobs:
           message: |
             ## 🚀 **Build Summary**
 
-            **Tests**: ${{ steps.test.outputs.status }} (${{ steps.test.outputs.count }} tests)  
-            **Build**: ✅ completed successfully  
+            **Tests**: ${{ steps.test.outputs.status }} (${{ steps.test.outputs.count }} tests)
+            **Build**: ✅ completed successfully
             **Size**: ${{ steps.build.outputs.size }}
 
             Ready for testing! 🎉

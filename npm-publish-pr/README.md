@@ -23,13 +23,13 @@ See [action.yml](action.yml).
 steps:
   - uses: actions/checkout@v5
 
-  - uses: codfish/actions/setup-node-and-install@main
+  - uses: codfish/actions/setup-node-and-install@v1
     with:
       node-version: lts/*
 
   - run: npm run build
 
-  - uses: codfish/actions/npm-pr-version@main
+  - uses: codfish/actions/npm-pr-version@v1
     with:
       npm-token: ${{ secrets.NPM_TOKEN }}
       github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -38,7 +38,7 @@ steps:
 ### Disable PR Comments
 
 ```yaml
-- uses: codfish/actions/npm-pr-version@main
+- uses: codfish/actions/npm-pr-version@v1
   with:
     npm-token: ${{ secrets.NPM_TOKEN }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -48,7 +48,7 @@ steps:
 ### Custom Comment Tag
 
 ```yaml
-- uses: codfish/actions/npm-pr-version@main
+- uses: codfish/actions/npm-pr-version@v1
   with:
     npm-token: ${{ secrets.NPM_TOKEN }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: codfish/actions/setup-node-and-install@main
+      - uses: codfish/actions/setup-node-and-install@v1
         with:
           node-version: 'lts/*'
 
@@ -80,7 +80,7 @@ jobs:
         run: npm run build
 
       - name: Publish PR package
-        uses: codfish/actions/npm-pr-version@main
+        uses: codfish/actions/npm-pr-version@v1
         with:
           npm-token: ${{ secrets.NPM_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
