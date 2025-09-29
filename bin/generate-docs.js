@@ -84,7 +84,7 @@ class DocumentationGenerator {
 
           // If it doesn't start with a step name, add one
           if (!example.match(/^\s*-\s*name:/m) && !example.match(/^\s*-\s*uses:/m)) {
-            return `- uses: codfish/actions/${dirName}@main\n${example.replace(/^/gm, '  ')}`;
+            return `- uses: codfish/actions/${dirName}@v1\n${example.replace(/^/gm, '  ')}`;
           }
 
           return example;
@@ -103,7 +103,7 @@ class DocumentationGenerator {
    * Generate a basic usage example based on action inputs
    */
   generateBasicExample(dirName, inputs = {}) {
-    let example = `- uses: codfish/actions/${dirName}@main`;
+    let example = `- uses: codfish/actions/${dirName}@v1`;
 
     const inputKeys = Object.keys(inputs);
     if (inputKeys.length > 0) {

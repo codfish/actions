@@ -10,7 +10,7 @@ See [action.yml](action.yml).
 
 ```yaml
 - name: Comment on PR
-  uses: codfish/actions/comment@main
+  uses: codfish/actions/comment@v1
   with:
     message: '✅ Build successful!'
     tag: 'build-status'
@@ -34,7 +34,7 @@ See [action.yml](action.yml).
 ### Basic comment
 
 ```yaml
-- uses: codfish/actions/comment@main
+- uses: codfish/actions/comment@v1
   with:
     message: 'Hello from GitHub Actions! 👋'
 ```
@@ -45,7 +45,7 @@ Use the `upsert` feature to update the same comment instead of creating multiple
 
 ```yaml
 - name: Update build status
-  uses: codfish/actions/comment@main
+  uses: codfish/actions/comment@v1
   with:
     message: |
       ## Build Status
@@ -55,7 +55,7 @@ Use the `upsert` feature to update the same comment instead of creating multiple
 
 # Later in the workflow...
 - name: Update build status
-  uses: codfish/actions/comment@main
+  uses: codfish/actions/comment@v1
   with:
     message: |
       ## Build Status
@@ -67,7 +67,7 @@ Use the `upsert` feature to update the same comment instead of creating multiple
 ### Multi-line markdown comment
 
 ```yaml
-- uses: codfish/actions/comment@main
+- uses: codfish/actions/comment@v1
   with:
     message: |
       ## 📊 Test Results

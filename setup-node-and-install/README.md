@@ -22,7 +22,7 @@ steps:
   - uses: actions/checkout@v5
 
   # will install latest Node v18.x
-  - uses: codfish/actions/setup-node-and-install@main
+  - uses: codfish/actions/setup-node-and-install@v1
     with:
       node-version: 18
       cache-key-suffix: '-${{ github.head_ref || github.event.release.tag_name }}'
@@ -50,7 +50,7 @@ v18.14.1
 steps:
   - uses: actions/checkout@v5
   # will install Node v18.14.1
-  - uses: codfish/actions/setup-node-and-install@main
+  - uses: codfish/actions/setup-node-and-install@v1
   - run: npm test
 ```
 
@@ -65,7 +65,7 @@ steps:
 steps:
   - uses: actions/checkout@v5
   # will install Node v20.10.0
-  - uses: codfish/actions/setup-node-and-install@main
+  - uses: codfish/actions/setup-node-and-install@v1
   - run: npm test
 ```
 
@@ -103,7 +103,7 @@ The action automatically detects your package manager:
 ### With specific Node version
 
 ```yaml
-- uses: codfish/actions/setup-node-and-install@main
+- uses: codfish/actions/setup-node-and-install@v1
   with:
     node-version: '18'
 ```
@@ -111,7 +111,7 @@ The action automatically detects your package manager:
 ### With pnpm in subdirectory
 
 ```yaml
-- uses: codfish/actions/setup-node-and-install@main
+- uses: codfish/actions/setup-node-and-install@v1
   with:
     working-directory: './frontend'
     install-options: '--frozen-lockfile'
@@ -120,7 +120,7 @@ The action automatically detects your package manager:
 ### With custom cache key
 
 ```yaml
-- uses: codfish/actions/setup-node-and-install@main
+- uses: codfish/actions/setup-node-and-install@v1
   with:
     cache-key-suffix: '-${{ github.head_ref }}'
 ```
@@ -135,5 +135,5 @@ Replace multiple setup steps with this single action:
 -     node-version-file: '.nvmrc'
 -     cache: 'npm'
 - - run: npm ci --prefer-offline --no-audit
-+ - uses: codfish/actions/setup-node-and-install@main
++ - uses: codfish/actions/setup-node-and-install@v1
 ```
