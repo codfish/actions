@@ -6,11 +6,10 @@ description:
 
 inputs:
   node-version:
-    description: Node.js version to install (e.g. '24', 'lts/*'). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node.
+    description:
+      'Node.js version to install (e.g. "24", "lts/*"). Precedence: node-version input > .node-version > .nvmrc >
+      package.json volta.node.'
     required: false
-  cache-key-suffix:
-    description: Additional suffix for cache key to enable multiple caches per workflow.
-    default: ''
   install-options:
     description: Extra command-line options to pass to npm/pnpm/yarn install.
     default: ''
@@ -21,7 +20,7 @@ inputs:
 outputs:
   cache-hit:
     description: Whether the dependency cache was hit (true/false).
-    value: '${{ steps.setup-node.outputs.cache-hit == 'true' && 'true' || 'false' }}'
+    value: "${{ steps.setup-node.outputs.cache-hit == 'true' && 'true' || 'false' }}"
 
 runs:
   using: composite
@@ -61,11 +60,9 @@ runs:
           echo "lockfile-path=" >> $GITHUB_OUTPUT
           echo "📦 No lockfile found, defaulting to: npm"
         fi
-      env:
-        INPUT_NODE_VERSION: ${{ inputs.node-version }}
 
     - name: Install pnpm
-      if: steps.setup.outputs.package-manager == 'pnpm'
+      if: steps.detect-package-manager.outputs.package-manager == 'pnpm'
       uses: pnpm/action-setup@v4
       with:
         run_install: false
@@ -113,68 +110,82 @@ runs:
       uses: actions/setup-node@v5
       id: setup-node
       with:
-        # use detected package manager cache if a lockfile is present
-        cache: ${{ steps.detect-package-manager.outputs.lockfile-exists == 'true' && steps.detect-package-manager.outputs.package-manager || '' }}
+        # use detected package manager cache
+        cache: ${{ steps.detect-package-manager.outputs.package-manager }}
         cache-dependency-path: ${{ inputs.working-directory }}
         node-version: ${{ steps.detect-node-version.outputs.version }}
         registry-url: 'https://registry.npmjs.org'
 
-    # Install dependencies with pnpm
+    # apply `./node_modules` cache only if a lockfile is present
+    # Will remove the need to run install commands twice. Risk reduced by using a very specific cache key.
+    # Cache wont be used if the lockfile changes, package manager, node version, or OS changes.
+    - name: Setup node_modules dependency cache
+      if: steps.detect-package-manager.outputs.lockfile-exists == 'true'
+      uses: actions/cache@v4
+      id: cache
+      with:
+        path: ${{ inputs.working-directory }}/node_modules
+        key:
+          ${{ runner.os }}-node_modules-${{ steps.detect-package-manager.outputs.package-manager }}-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles(format('{0}/{1}', inputs.working-directory, steps.detect-package-manager.outputs.lockfile-path)) }}
+
     - name: Install dependencies with pnpm
-      if: steps.detect-package-manager.outputs.package-manager == 'pnpm'
+      if: steps.detect-package-manager.outputs.package-manager == 'pnpm' && steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         echo "🔧 Installing dependencies with pnpm..."
-        if ! pnpm install $INPUT_INSTALL_OPTIONS; then
+        if [ "$LOCKFILE_EXISTS" = "true" ]; then
+          INPUT_INSTALL_OPTIONS="--frozen-lockfile $INPUT_INSTALL_OPTIONS"
+        else
+          echo "⚠️  Warning: No lockfile found, not using --frozen-lockfile"
+        fi
+        if ! pnpm i $INPUT_INSTALL_OPTIONS; then
           echo "❌ ERROR: pnpm install failed"
           exit 1
         fi
         echo "✅ pnpm install completed successfully"
       env:
         INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
+        LOCKFILE_EXISTS: ${{ steps.detect-package-manager.outputs.lockfile-exists }}
 
-    # Install dependencies with yarn
     - name: Install dependencies with yarn
-      if: steps.setup.outputs.package-manager == 'yarn'
+      if: steps.detect-package-manager.outputs.package-manager == 'yarn' && steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         echo "🔧 Installing dependencies with yarn..."
-        if ! yarn install --frozen-lockfile $INPUT_INSTALL_OPTIONS; then
+        if [ "$LOCKFILE_EXISTS" = "true" ]; then
+          INPUT_INSTALL_OPTIONS="--frozen-lockfile $INPUT_INSTALL_OPTIONS"
+        else
+          echo "⚠️  Warning: No lockfile found, results may vary"
+        fi
+        if ! yarn install $INPUT_INSTALL_OPTIONS; then
           echo "❌ ERROR: yarn install failed"
           exit 1
         fi
         echo "✅ yarn install completed successfully"
       env:
         INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
+        LOCKFILE_EXISTS: ${{ steps.detect-package-manager.outputs.lockfile-exists }}
 
-    # Install dependencies with npm (with lockfile)
-    - name: Install dependencies with npm (with lockfile)
-      if: steps.setup.outputs.lockfile-exists == 'true' && steps.setup.outputs.package-manager == 'npm'
+    - name: Install dependencies with npm
+      if: steps.detect-package-manager.outputs.package-manager == 'npm' && steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        echo "🔧 Installing dependencies with npm ci..."
-        if ! npm ci --prefer-offline --no-audit $INPUT_INSTALL_OPTIONS; then
-          echo "❌ ERROR: npm ci failed"
+        NPM_CMD=""
+        if [ "$LOCKFILE_EXISTS" = "true" ]; then
+          NPM_CMD="ci"
+        else
+          echo "⚠️  Warning: No lockfile found, versions may vary"
+          NPM_CMD="install"
+        fi
+        echo "🔧 Installing dependencies with npm $NPM_CMD..."
+        if ! npm $NPM_CMD --no-save --prefer-offline --no-audit $INPUT_INSTALL_OPTIONS; then
+          echo "❌ ERROR: npm $NPM_CMD failed"
           exit 1
         fi
-        echo "✅ npm ci completed successfully"
+        echo "✅ npm $NPM_CMD completed successfully"
       env:
         INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
-
-    - name: Install dependencies with npm (without lockfile)
-      if: steps.setup.outputs.lockfile-exists == 'false' && steps.setup.outputs.package-manager == 'npm'
-      working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: |
-        echo "🔧 Installing dependencies with npm install..."
-        echo "⚠️  Warning: No lockfile found, versions may vary"
-        if ! npm install --no-save --prefer-offline --no-audit $INPUT_INSTALL_OPTIONS; then
-          echo "❌ ERROR: npm install failed"
-          exit 1
-        fi
-        echo "✅ npm install completed successfully"
-      env:
-        INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
+        LOCKFILE_EXISTS: ${{ steps.detect-package-manager.outputs.lockfile-exists }}

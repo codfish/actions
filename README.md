@@ -101,23 +101,21 @@ steps:
 ### [setup-node-and-install](./setup-node-and-install/)
 
 Sets up Node.js environment and installs dependencies with automatic package manager detection (npm/pnpm/yarn),
-intelligent caching, and dynamic Node version detection via input, `.node-version`, `.nvmrc`, or `package.json`
-`volta.node`.
+intelligent caching, and version detection via input, .node-version, .nvmrc, or package.json volta.node
 
 **Inputs:**
 
-| Input               | Description                                                                                                            | Required | Default |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `node-version`      | Node.js version to install (e.g. '24', 'lts/\*'). Precedence: input > .node-version > .nvmrc > package.json volta.node | No       | -       |
-| `cache-key-suffix`  | Additional suffix for cache key to enable multiple caches per workflow                                                 | No       | -       |
-| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install                                                            | No       | -       |
-| `working-directory` | Directory containing package.json and lockfile                                                                         | No       | `.`     |
+| Input               | Description                                                                                                                          | Required | Default |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------- |
+| `node-version`      | Node.js version to install (e.g. "24", "lts/\*"). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node. | No       | -       |
+| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install.                                                                         | No       | -       |
+| `working-directory` | Directory containing package.json and lockfile.                                                                                      | No       | `.`     |
 
 **Outputs:**
 
-| Output      | Description                                       |
-| ----------- | ------------------------------------------------- |
-| `cache-hit` | Whether the dependency cache was hit (true/false) |
+| Output      | Description                                        |
+| ----------- | -------------------------------------------------- |
+| `cache-hit` | Whether the dependency cache was hit (true/false). |
 
 **Usage:**
 
