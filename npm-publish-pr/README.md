@@ -1,4 +1,4 @@
-# npm-pr-version
+# npm-publish-pr
 
 Publishes packages with PR-specific version numbers for testing in downstream applications before merging. Automatically
 detects your package manager (npm, yarn, or pnpm) and uses the appropriate publish command. The action generates
