@@ -6,7 +6,7 @@ description:
 
 inputs:
   npm-token:
-    required: false
+    required: true
     description: Registry authentication token with publish permissions (works with npm/yarn/pnpm)
   github-token:
     required: true
@@ -173,6 +173,6 @@ runs:
         message: |
           ✅ **PR package published successfully!**
 
-          Install with: `npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}`
+          Install with: <code>npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}</code>
         upsert: true
         tag: ${{ inputs.comment-tag }}
