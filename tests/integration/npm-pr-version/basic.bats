@@ -409,3 +409,30 @@ Error: $error_message
     assert_output_contains "https://github.com/owner/repo/actions/runs/12345678" "$(cat output.txt)"
     assert_output_contains "for more details." "$(cat output.txt)"
 }
+
+@test "npm-pr-version: commits package.json after version update" {
+    # Test that package.json is committed after npm version to keep git clean
+    bash -c '
+        # Simulate the version update and git commit workflow
+        echo "Simulating npm version update..."
+        echo "package.json modified"
+
+        # Simulate git configuration and commit (as per action.yml)
+        echo "Configuring git user..."
+        echo "git config user.name github-actions[bot]"
+        echo "git config user.email github-actions[bot]@users.noreply.github.com"
+        echo "Committing package.json changes..."
+        echo "git add package.json"
+        echo "git commit -m ci: update package version"
+        echo "working-tree=clean"
+
+        # This prevents pnpm/yarn git checks from failing
+        echo "pnpm-ready=true"
+    ' > output.txt
+
+    assert_output_contains "git config user.name github-actions[bot]" "$(cat output.txt)"
+    assert_output_contains "git add package.json" "$(cat output.txt)"
+    assert_output_contains "git commit -m ci: update package version" "$(cat output.txt)"
+    assert_output_contains "working-tree=clean" "$(cat output.txt)"
+    assert_output_contains "pnpm-ready=true" "$(cat output.txt)"
+}

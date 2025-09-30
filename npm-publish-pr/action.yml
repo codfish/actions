@@ -118,7 +118,7 @@ runs:
         # Publish package based on detected package manager
         case "$package_manager" in
           "yarn")
-            publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version 2>&1)
+            publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version --skip-check-working-tree 2>&1)
             publish_exit_code=$?
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with yarn. Error: $publish_output"
@@ -128,7 +128,7 @@ runs:
             fi
             ;;
           "pnpm")
-            publish_output=$(pnpm publish --access public --tag pr 2>&1)
+            publish_output=$(pnpm publish --no-git-checks --access public --tag pr 2>&1)
             publish_exit_code=$?
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with pnpm. Error: $publish_output"

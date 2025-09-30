@@ -126,7 +126,9 @@ runs:
       with:
         path: ${{ inputs.working-directory }}/node_modules
         key:
-          ${{ runner.os }}-node_modules-${{ steps.detect-package-manager.outputs.package-manager }}-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles(format('{0}/{1}', inputs.working-directory, steps.detect-package-manager.outputs.lockfile-path)) }}
+          ${{ runner.os }}-node_modules-${{ steps.detect-package-manager.outputs.package-manager }}-${{
+          steps.setup-node.outputs.node-version }}-${{ hashFiles(format('{0}/{1}', inputs.working-directory,
+          steps.detect-package-manager.outputs.lockfile-path)) }}
 
     - name: Install dependencies with pnpm
       if: steps.detect-package-manager.outputs.package-manager == 'pnpm' && steps.cache.outputs.cache-hit != 'true'
