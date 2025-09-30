@@ -25,8 +25,8 @@ Reference actions using the following format:
 
 ```yaml
 uses: codfish/actions/{action-name}@main
-uses: codfish/actions/{action-name}@v1
-uses: codfish/actions/{action-name}@v1.0.1
+uses: codfish/actions/{action-name}@v2
+uses: codfish/actions/{action-name}@v2.0.1
 uses: codfish/actions/{action-name}@feature-branch
 uses: codfish/actions/{action-name}@aff1a9d
 ```
@@ -51,7 +51,7 @@ Creates or updates a comment in a pull request with optional tagging for upsert 
 
 ```yaml
 - name: Comment on PR
-  uses: codfish/actions/comment@v1
+  uses: codfish/actions/comment@v2
   with:
     message: '✅ Build successful!'
     tag: 'build-status'
@@ -86,13 +86,13 @@ automatically comments on PR
 steps:
   - uses: actions/checkout@v5
 
-  - uses: codfish/actions/setup-node-and-install@v1
+  - uses: codfish/actions/setup-node-and-install@v2
     with:
       node-version: lts/*
 
   - run: npm run build
 
-  - uses: codfish/actions/npm-pr-version@v1
+  - uses: codfish/actions/npm-pr-version@v2
     with:
       npm-token: ${{ secrets.NPM_TOKEN }}
       github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -124,7 +124,7 @@ steps:
   - uses: actions/checkout@v5
 
   # will install latest Node v18.x
-  - uses: codfish/actions/setup-node-and-install@v1
+  - uses: codfish/actions/setup-node-and-install@v2
     with:
       node-version: 18
       cache-key-suffix: '-${{ github.head_ref || github.event.release.tag_name }}'
@@ -159,7 +159,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: codfish/actions/setup-node-and-install@v1
+      - uses: codfish/actions/setup-node-and-install@v2
         with:
           node-version: 'lts/*'
 
@@ -191,7 +191,7 @@ jobs:
           echo "size=$size" >> $GITHUB_OUTPUT
         id: build
 
-      - uses: codfish/actions/comment@v1
+      - uses: codfish/actions/comment@v2
         with:
           message: |
             ## 🚀 **Build Summary**
@@ -204,7 +204,7 @@ jobs:
           tag: 'build-summary'
           upsert: true
 
-      - uses: codfish/actions/npm-pr-version@v1
+      - uses: codfish/actions/npm-pr-version@v2
         with:
           npm-token: ${{ secrets.NPM_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
