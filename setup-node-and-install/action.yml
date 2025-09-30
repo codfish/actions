@@ -2,86 +2,40 @@ name: setup-node-and-install
 
 description:
   Sets up Node.js environment and installs dependencies with automatic package manager detection (npm/pnpm/yarn),
-  intelligent caching, and .nvmrc/.node-version support
+  intelligent caching, and version detection via input, .node-version, .nvmrc, or package.json volta.node
 
 inputs:
   node-version:
-    description: Node.js version to install (e.g. '24', 'lts/*'). Defaults to .nvmrc or .node-version file if present
+    description:
+      'Node.js version to install (e.g. "24", "lts/*"). Precedence: node-version input > .node-version > .nvmrc >
+      package.json volta.node.'
     required: false
-  cache-key-suffix:
-    description: Additional suffix for cache key to enable multiple caches per workflow
-    default: ''
   install-options:
-    description: Extra command-line options to pass to npm/pnpm/yarn install
+    description: Extra command-line options to pass to npm/pnpm/yarn install.
     default: ''
   working-directory:
-    description: Directory containing package.json and lockfile
+    description: Directory containing package.json and lockfile.
     default: .
 
-outputs: {}
+outputs:
+  cache-hit:
+    description: Whether the dependency cache was hit (true/false).
+    value: "${{ steps.setup-node.outputs.cache-hit == 'true' && 'true' || 'false' }}"
 
 runs:
   using: composite
 
   steps:
-    - name: Validate inputs and detect package manager
-      id: setup
+    - name: Validate environment and detect package manager
+      id: detect-package-manager
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        # Validate working directory exists
-        if [ ! -d "." ]; then
-          echo "❌ ERROR: Working directory '${{ inputs.working-directory }}' does not exist"
-          exit 1
-        fi
-
         # Validate package.json exists
         if [ ! -f "./package.json" ]; then
           echo "❌ ERROR: package.json not found in '${{ inputs.working-directory }}'"
           echo "Make sure the working-directory contains a valid Node.js project"
           exit 1
-        fi
-
-        # Validate package.json is valid JSON
-        if ! jq empty package.json 2>/dev/null; then
-          echo "❌ ERROR: package.json is not valid JSON"
-          exit 1
-        fi
-
-        # Check Node version requirements (.nvmrc, .node-version, or input)
-        if [[ ! -f "./.nvmrc" && ! -f "./.node-version" && -z "$INPUT_NODE_VERSION" ]]; then
-          echo "node-version-missing=true" >> $GITHUB_OUTPUT
-          exit
-        fi
-
-        # Validate .nvmrc format if it exists
-        if [ -f "./.nvmrc" ]; then
-          nvmrc_version=$(cat .nvmrc | tr -d '\n\r' | xargs)
-          if [ -z "$nvmrc_version" ]; then
-            echo "❌ ERROR: .nvmrc file is empty"
-            exit 1
-          fi
-          echo "📋 Found .nvmrc with Node version: $nvmrc_version"
-        fi
-
-        # Validate .node-version format if it exists (and no .nvmrc)
-        if [ -f "./.node-version" ] && [ ! -f "./.nvmrc" ]; then
-          node_version_file=$(cat .node-version | tr -d '\n\r' | xargs)
-          if [ -z "$node_version_file" ]; then
-            echo "❌ ERROR: .node-version file is empty"
-            exit 1
-          fi
-          echo "📋 Found .node-version with Node version: $node_version_file"
-        fi
-
-        # Show priority info if both files exist
-        if [ -f "./.nvmrc" ] && [ -f "./.node-version" ]; then
-          echo "📋 Both .nvmrc and .node-version found, .nvmrc takes priority"
-        fi
-
-        # Validate node-version input format if provided
-        if [ -n "$INPUT_NODE_VERSION" ]; then
-          echo "📋 Using Node version from input: $INPUT_NODE_VERSION"
         fi
 
         # Detect package manager based on lockfiles (including yarn)
@@ -106,115 +60,134 @@ runs:
           echo "lockfile-path=" >> $GITHUB_OUTPUT
           echo "📦 No lockfile found, defaulting to: npm"
         fi
-      env:
-        INPUT_NODE_VERSION: ${{ inputs.node-version }}
-
-    - if: steps.setup.outputs.node-version-missing == 'true'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          core.setFailed('You need to create an .nvmrc file, .node-version file, or pass a value in the `node-version` input.')
 
     - name: Install pnpm
-      if: steps.setup.outputs.package-manager == 'pnpm'
+      if: steps.detect-package-manager.outputs.package-manager == 'pnpm'
       uses: pnpm/action-setup@v4
       with:
         run_install: false
 
-    - name: Setup node with .nvmrc
-      if: ${{ inputs.node-version != '' || hashFiles(format('{0}/.nvmrc', inputs.working-directory)) != '' }}
-      uses: actions/setup-node@v5
-      id: setup-node
-      with:
-        # use detected package manager cache if a lockfile is present
-        cache: ${{ steps.setup.outputs.lockfile-exists == 'true' && steps.setup.outputs.package-manager || '' }}
-        # supplying a node-version input will override the .nvmrc file and give a warning, but that's to be expected.
-        cache-dependency-path: ${{ inputs.working-directory }}
-        node-version: ${{ inputs.node-version }}
-        node-version-file: '${{ inputs.working-directory }}/.nvmrc'
-        registry-url: 'https://registry.npmjs.org'
-
-    - name: Read .node-version file
-      if:
-        ${{ inputs.node-version == '' && hashFiles(format('{0}/.nvmrc', inputs.working-directory)) == '' &&
-        hashFiles(format('{0}/.node-version', inputs.working-directory)) != '' }}
-      id: read-node-version
+    # Detect Node.js version to use (input > .node-version > .nvmrc > package.json volta.node)
+    - name: Detect node version
+      id: detect-node-version
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        node_version=$(cat .node-version | tr -d '\n\r' | xargs)
-        echo "node-version=$node_version" >> $GITHUB_OUTPUT
-        echo "📋 Read Node version from .node-version: $node_version"
+        resolved_version=""
 
-    - name: Setup node with .node-version
-      if:
-        ${{ inputs.node-version == '' && hashFiles(format('{0}/.nvmrc', inputs.working-directory)) == '' &&
-        hashFiles(format('{0}/.node-version', inputs.working-directory)) != '' }}
+        if [ -n "${INPUT_NODE_VERSION}" ]; then
+          resolved_version="$INPUT_NODE_VERSION"
+          echo "📋 Using Node version from input: $resolved_version"
+        elif [ -f "./.node-version" ]; then
+          file_version=$(cat ./.node-version | tr -d '\n\r' | xargs)
+          if [ -n "$file_version" ]; then
+            resolved_version="$file_version"
+            echo "📋 Using Node version from .node-version: $resolved_version"
+          fi
+        fi
+
+        if [ -z "$resolved_version" ] && [ -f "./.nvmrc" ]; then
+          nvmrc_version=$(cat ./.nvmrc | tr -d '\n\r' | xargs)
+          if [ -n "$nvmrc_version" ]; then
+            resolved_version="$nvmrc_version"
+            echo "📋 Using Node version from .nvmrc: $resolved_version"
+          fi
+        fi
+
+        if [ -z "$resolved_version" ]; then
+          volta_node=$(jq -r '.volta.node // empty' package.json 2>/dev/null || true)
+          if [ -n "$volta_node" ]; then
+            resolved_version="$volta_node"
+            echo "📋 Using Node version from package.json volta.node: $resolved_version"
+          fi
+        fi
+
+        echo "version=$resolved_version" >> $GITHUB_OUTPUT
+      env:
+        INPUT_NODE_VERSION: ${{ inputs.node-version }}
+
+    - name: Setup Node.js
       uses: actions/setup-node@v5
-      id: setup-node-alt
+      id: setup-node
       with:
-        # use detected package manager cache if a lockfile is present
-        cache: ${{ steps.setup.outputs.lockfile-exists == 'true' && steps.setup.outputs.package-manager || '' }}
+        # use detected package manager cache
+        cache: ${{ steps.detect-package-manager.outputs.package-manager }}
         cache-dependency-path: ${{ inputs.working-directory }}
-        node-version: ${{ steps.read-node-version.outputs.node-version }}
+        node-version: ${{ steps.detect-node-version.outputs.version }}
         registry-url: 'https://registry.npmjs.org'
 
-    # Install dependencies with pnpm
+    # apply `./node_modules` cache only if a lockfile is present
+    # Will remove the need to run install commands twice. Risk reduced by using a very specific cache key.
+    # Cache wont be used if the lockfile changes, package manager, node version, or OS changes.
+    - name: Setup node_modules dependency cache
+      if: steps.detect-package-manager.outputs.lockfile-exists == 'true'
+      uses: actions/cache@v4
+      id: cache
+      with:
+        path: ${{ inputs.working-directory }}/node_modules
+        key:
+          ${{ runner.os }}-node_modules-${{ steps.detect-package-manager.outputs.package-manager }}-${{
+          steps.setup-node.outputs.node-version }}-${{ hashFiles(format('{0}/{1}', inputs.working-directory,
+          steps.detect-package-manager.outputs.lockfile-path)) }}
+
     - name: Install dependencies with pnpm
-      if: steps.setup.outputs.package-manager == 'pnpm'
+      if: steps.detect-package-manager.outputs.package-manager == 'pnpm' && steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         echo "🔧 Installing dependencies with pnpm..."
-        if ! pnpm install $INPUT_INSTALL_OPTIONS; then
+        if [ "$LOCKFILE_EXISTS" = "true" ]; then
+          INPUT_INSTALL_OPTIONS="--frozen-lockfile $INPUT_INSTALL_OPTIONS"
+        else
+          echo "⚠️  Warning: No lockfile found, not using --frozen-lockfile"
+        fi
+        if ! pnpm i $INPUT_INSTALL_OPTIONS; then
           echo "❌ ERROR: pnpm install failed"
           exit 1
         fi
         echo "✅ pnpm install completed successfully"
       env:
         INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
+        LOCKFILE_EXISTS: ${{ steps.detect-package-manager.outputs.lockfile-exists }}
 
-    # Install dependencies with yarn
     - name: Install dependencies with yarn
-      if: steps.setup.outputs.package-manager == 'yarn'
+      if: steps.detect-package-manager.outputs.package-manager == 'yarn' && steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
         echo "🔧 Installing dependencies with yarn..."
-        if ! yarn install --frozen-lockfile $INPUT_INSTALL_OPTIONS; then
+        if [ "$LOCKFILE_EXISTS" = "true" ]; then
+          INPUT_INSTALL_OPTIONS="--frozen-lockfile $INPUT_INSTALL_OPTIONS"
+        else
+          echo "⚠️  Warning: No lockfile found, results may vary"
+        fi
+        if ! yarn install $INPUT_INSTALL_OPTIONS; then
           echo "❌ ERROR: yarn install failed"
           exit 1
         fi
         echo "✅ yarn install completed successfully"
       env:
         INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
+        LOCKFILE_EXISTS: ${{ steps.detect-package-manager.outputs.lockfile-exists }}
 
-    # Install dependencies with npm (with lockfile)
-    - name: Install dependencies with npm (with lockfile)
-      if: steps.setup.outputs.lockfile-exists == 'true' && steps.setup.outputs.package-manager == 'npm'
+    - name: Install dependencies with npm
+      if: steps.detect-package-manager.outputs.package-manager == 'npm' && steps.cache.outputs.cache-hit != 'true'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: |
-        echo "🔧 Installing dependencies with npm ci..."
-        if ! npm ci --prefer-offline --no-audit $INPUT_INSTALL_OPTIONS; then
-          echo "❌ ERROR: npm ci failed"
+        NPM_CMD=""
+        if [ "$LOCKFILE_EXISTS" = "true" ]; then
+          NPM_CMD="ci"
+        else
+          echo "⚠️  Warning: No lockfile found, versions may vary"
+          NPM_CMD="install"
+        fi
+        echo "🔧 Installing dependencies with npm $NPM_CMD..."
+        if ! npm $NPM_CMD --no-save --prefer-offline --no-audit $INPUT_INSTALL_OPTIONS; then
+          echo "❌ ERROR: npm $NPM_CMD failed"
           exit 1
         fi
-        echo "✅ npm ci completed successfully"
+        echo "✅ npm $NPM_CMD completed successfully"
       env:
         INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
-
-    - name: Install dependencies with npm (without lockfile)
-      if: steps.setup.outputs.lockfile-exists == 'false' && steps.setup.outputs.package-manager == 'npm'
-      working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: |
-        echo "🔧 Installing dependencies with npm install..."
-        echo "⚠️  Warning: No lockfile found, versions may vary"
-        if ! npm install --no-save --prefer-offline --no-audit $INPUT_INSTALL_OPTIONS; then
-          echo "❌ ERROR: npm install failed"
-          exit 1
-        fi
-        echo "✅ npm install completed successfully"
-      env:
-        INPUT_INSTALL_OPTIONS: ${{ inputs.install-options }}
+        LOCKFILE_EXISTS: ${{ steps.detect-package-manager.outputs.lockfile-exists }}

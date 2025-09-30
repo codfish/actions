@@ -6,7 +6,7 @@ description:
 
 inputs:
   npm-token:
-    required: false
+    required: true
     description: Registry authentication token with publish permissions (works with npm/yarn/pnpm)
   github-token:
     required: true
@@ -53,11 +53,18 @@ runs:
         package_name=""
         version=""
 
+        # Function to sanitize error messages for GitHub output
+        sanitize_error() {
+          local message="$1"
+          # Replace newlines with spaces, remove extra whitespace, truncate if too long
+          echo "$message" | tr '\n' ' ' | tr -s ' ' | cut -c1-500
+        }
+
         # Validate package.json exists
         if [ ! -f "package.json" ]; then
           error_message="❌ ERROR: package.json not found in current directory. Make sure you're running this action in a directory with a package.json file"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -65,7 +72,7 @@ runs:
         if ! jq empty package.json 2>/dev/null; then
           error_message="❌ ERROR: package.json is not valid JSON"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -74,7 +81,7 @@ runs:
         if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
           error_message="❌ ERROR: package.json must have a 'name' field"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -104,29 +111,29 @@ runs:
         if [ $version_exit_code -ne 0 ]; then
           error_message="❌ ERROR: Failed to update package version. Check if the version format is valid. Error: $version_output"
           echo "$error_message"
-          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
         # Publish package based on detected package manager
         case "$package_manager" in
           "yarn")
-            publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version 2>&1)
+            publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version --skip-check-working-tree 2>&1)
             publish_exit_code=$?
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with yarn. Error: $publish_output"
               echo "$error_message"
-              echo "error-message=$error_message" >> $GITHUB_OUTPUT
+              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
           "pnpm")
-            publish_output=$(pnpm publish --access public --tag pr 2>&1)
+            publish_output=$(pnpm publish --no-git-checks --access public --tag pr 2>&1)
             publish_exit_code=$?
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with pnpm. Error: $publish_output"
               echo "$error_message"
-              echo "error-message=$error_message" >> $GITHUB_OUTPUT
+              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
@@ -136,7 +143,7 @@ runs:
             if [ $publish_exit_code -ne 0 ]; then
               error_message="❌ ERROR: Failed to publish package with npm. Error: $publish_output"
               echo "$error_message"
-              echo "error-message=$error_message" >> $GITHUB_OUTPUT
+              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
               exit 1
             fi
             ;;
@@ -156,7 +163,7 @@ runs:
 
           Error: ${{ steps.publish.outputs.error-message }}
 
-          Please check the workflow logs for more details.
+          📋 [View workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
         upsert: true
         tag: ${{ inputs.comment-tag }}
 
@@ -166,6 +173,6 @@ runs:
         message: |
           ✅ **PR package published successfully!**
 
-          Install with: `npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}`
+          Install with: <code>npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}</code>
         upsert: true
         tag: ${{ inputs.comment-tag }}

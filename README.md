@@ -67,7 +67,7 @@ automatically comments on PR
 
 | Input          | Description                                                                         | Required | Default          |
 | -------------- | ----------------------------------------------------------------------------------- | -------- | ---------------- |
-| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | No       | -                |
+| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | Yes      | -                |
 | `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes      | -                |
 | `comment`      | Whether to comment on the PR with the published version (true/false)                | No       | `true`           |
 | `comment-tag`  | Tag to use for PR comments (for comment identification and updates)                 | No       | `npm-publish-pr` |
@@ -101,16 +101,21 @@ steps:
 ### [setup-node-and-install](./setup-node-and-install/)
 
 Sets up Node.js environment and installs dependencies with automatic package manager detection (npm/pnpm/yarn),
-intelligent caching, and .nvmrc/.node-version support
+intelligent caching, and version detection via input, .node-version, .nvmrc, or package.json volta.node
 
 **Inputs:**
 
-| Input               | Description                                                                                           | Required | Default |
-| ------------------- | ----------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `node-version`      | Node.js version to install (e.g. '24', 'lts/\*'). Defaults to .nvmrc or .node-version file if present | No       | -       |
-| `cache-key-suffix`  | Additional suffix for cache key to enable multiple caches per workflow                                | No       | -       |
-| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install                                           | No       | -       |
-| `working-directory` | Directory containing package.json and lockfile                                                        | No       | `.`     |
+| Input               | Description                                                                                                                          | Required | Default |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------- |
+| `node-version`      | Node.js version to install (e.g. "24", "lts/\*"). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node. | No       | -       |
+| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install.                                                                         | No       | -       |
+| `working-directory` | Directory containing package.json and lockfile.                                                                                      | No       | `.`     |
+
+**Outputs:**
+
+| Output      | Description                                        |
+| ----------- | -------------------------------------------------- |
+| `cache-hit` | Whether the dependency cache was hit (true/false). |
 
 **Usage:**
 
