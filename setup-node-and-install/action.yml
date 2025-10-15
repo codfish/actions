@@ -120,7 +120,9 @@ runs:
     # Will remove the need to run install commands twice. Risk reduced by using a very specific cache key.
     # Cache wont be used if the lockfile changes, package manager, node version, or OS changes.
     - name: Setup node_modules dependency cache
-      if: steps.detect-package-manager.outputs.lockfile-exists == 'true' && steps.detect-package-manager.outputs.package-manager == 'npm'
+      if:
+        steps.detect-package-manager.outputs.lockfile-exists == 'true' &&
+        steps.detect-package-manager.outputs.package-manager == 'npm'
       uses: actions/cache@v4
       id: cache
       with:
