@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '*/action.yml'
+      - '*/README.md'
       - bin/generate-docs.js
 
 permissions:
