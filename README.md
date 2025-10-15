@@ -123,11 +123,13 @@ intelligent caching, and version detection via input, .node-version, .nvmrc, or 
 steps:
   - uses: actions/checkout@v5
 
-  # will install latest Node v18.x
+  # Will setup node, inferring node version from your codebase & installing your dependencies
+  - uses: codfish/actions/setup-node-and-install@v2
+
+  # Or if you want to be explicit
   - uses: codfish/actions/setup-node-and-install@v2
     with:
-      node-version: 18
-      cache-key-suffix: '-${{ github.head_ref || github.event.release.tag_name }}'
+      node-version: 24.4
 
   - run: npm test
 ```
