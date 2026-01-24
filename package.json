@@ -25,14 +25,14 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@codfish/eslint-config": "^12.1.1",
-    "bats": "^1.10.0",
+    "@codfish/eslint-config": "^12.2.0",
+    "bats": "^1.13.0",
     "doctoc": "^2.2.1",
-    "eslint": "^9.36.0",
+    "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.0",
-    "lint-staged": "^16.2.0",
-    "prettier": "^3.6.2"
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1"
   },
   "packageManager": "pnpm@10.17.1",
   "commitlint": {

@@ -21,7 +21,7 @@ See [action.yml](action.yml).
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
+  - uses: actions/checkout@v6
 
   - uses: codfish/actions/setup-node-and-install@v2
     with:
@@ -70,7 +70,7 @@ jobs:
   publish-pr-package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: codfish/actions/setup-node-and-install@v2
         with:
