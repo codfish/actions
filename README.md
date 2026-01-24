@@ -84,7 +84,7 @@ automatically comments on PR
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
+  - uses: actions/checkout@v6
 
   - uses: codfish/actions/setup-node-and-install@v2
     with:
@@ -121,7 +121,7 @@ intelligent caching, and version detection via input, .node-version, .nvmrc, or 
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
+  - uses: actions/checkout@v6
 
   # Will setup node, inferring node version from your codebase & installing your dependencies
   - uses: codfish/actions/setup-node-and-install@v2
@@ -159,7 +159,7 @@ jobs:
   test-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: codfish/actions/setup-node-and-install@v2
         with:

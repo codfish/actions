@@ -19,7 +19,7 @@ See [action.yml](action.yml).
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
+  - uses: actions/checkout@v6
 
   # Will setup node, inferring node version from your codebase & installing your dependencies
   - uses: codfish/actions/setup-node-and-install@v2
@@ -52,7 +52,7 @@ v18.14.1
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
+  - uses: actions/checkout@v6
   # will install Node v18.14.1
   - uses: codfish/actions/setup-node-and-install@v2
   - run: npm test
@@ -67,7 +67,7 @@ steps:
 
 ```yaml
 steps:
-  - uses: actions/checkout@v5
+  - uses: actions/checkout@v6
   # will install Node v20.10.0
   - uses: codfish/actions/setup-node-and-install@v2
   - run: npm test
