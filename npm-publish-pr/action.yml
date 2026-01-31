@@ -1,16 +1,14 @@
 name: npm-pr-version
 
 description:
-  Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) and
-  automatically comments on PR
+  Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) or
+  OIDC trusted publishing, and automatically comments on PR
 
 inputs:
   npm-token:
-    required: true
-    description: Registry authentication token with publish permissions (works with npm/yarn/pnpm)
-  github-token:
-    required: true
-    description: GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN)
+    required: false
+    description:
+      Registry authentication token with publish permissions. If not provided, OIDC trusted publishing will be used.
   comment:
     required: false
     default: 'true'
@@ -46,25 +44,49 @@ runs:
       id: publish
       shell: bash
       run: |
-        set +e  # Don't exit on error so we can handle failures
+        set +e # Don't exit on error so we can handle failures
 
         # Initialize outputs for error handling
         error_message=""
         package_name=""
         version=""
+        package_manager="npm"
 
-        # Function to sanitize error messages for GitHub output
-        sanitize_error() {
-          local message="$1"
-          # Replace newlines with spaces, remove extra whitespace, truncate if too long
-          echo "$message" | tr '\n' ' ' | tr -s ' ' | cut -c1-500
+        # Function to extract relevant error message from npm output
+        extract_error() {
+          local output="$1"
+
+          # Extract npm error lines (lines starting with "npm error")
+          local error_lines=$(echo "$output" | grep "^npm error" | head -5)
+
+          # If we found error lines, use those
+          if [ -n "$error_lines" ]; then
+            echo "$error_lines" | tr '\n' ' ' | tr -s ' '
+          else
+            # Otherwise, take the last few lines (likely contains the error)
+            echo "$output" | tail -10 | tr '\n' ' ' | tr -s ' ' | cut -c1-500
+          fi
+        }
+
+        # Standardized publish error handler
+        handle_publish_error() {
+          local manager_name="$1"
+          local publish_output="$2"
+          local extracted_error=""
+
+          extracted_error=$(extract_error "$publish_output")
+          error_message="❌ Failed to publish with ${manager_name}: ${extracted_error}"
+          echo "Full output: $publish_output"
+          echo "Error message: $error_message"
+          echo "error-message=$error_message" >> $GITHUB_OUTPUT
+          exit 1
         }
 
         # Validate package.json exists
         if [ ! -f "package.json" ]; then
           error_message="❌ ERROR: package.json not found in current directory. Make sure you're running this action in a directory with a package.json file"
           echo "$error_message"
-          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
+          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -72,7 +94,7 @@ runs:
         if ! jq empty package.json 2>/dev/null; then
           error_message="❌ ERROR: package.json is not valid JSON"
           echo "$error_message"
-          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
+          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
@@ -81,23 +103,43 @@ runs:
         if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
           error_message="❌ ERROR: package.json must have a 'name' field"
           echo "$error_message"
-          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
+          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
         # Output package name for use in error handling
         echo "package-name=$package_name" >> $GITHUB_OUTPUT
 
-        # Detect package manager
-        if [ -f "./yarn.lock" ]; then
-          package_manager="yarn"
-          echo "📦 Detected package manager: yarn"
-        elif [ -f "./pnpm-lock.yaml" ]; then
-          package_manager="pnpm"
-          echo "📦 Detected package manager: pnpm"
-        else
-          package_manager="npm"
-          echo "📦 Detected package manager: npm"
+        # Detect authentication mode and package manager
+        if [ -z "$INPUT_NPM_TOKEN" ]; then
+          echo "🔐 Using OIDC trusted publishing (no npm-token provided)"
+          echo "📦 Using npm for OIDC (--provenance requires npm)"
+
+          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            error_message="❌ ERROR: OIDC token not available. Add 'permissions: { id-token: write }' to your workflow"
+            echo "$error_message"
+            echo "error-message=$error_message" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+        fi
+
+        if [ "$INPUT_NPM_TOKEN" ]; then
+          echo "🔐 Using token-based authentication"
+
+          # Token mode: set NODE_AUTH_TOKEN so publishing works
+          export NODE_AUTH_TOKEN="$INPUT_NPM_TOKEN"
+
+          # Detect package manager for token-based publishing
+          if [ -f "./yarn.lock" ]; then
+            package_manager="yarn"
+            echo "📦 Detected package manager: yarn"
+          elif [ -f "./pnpm-lock.yaml" ]; then
+            package_manager="pnpm"
+            echo "📦 Detected package manager: pnpm"
+          else
+            package_manager="npm"
+            echo "📦 Detected package manager: npm"
+          fi
         fi
 
         # Generate version
@@ -111,47 +153,52 @@ runs:
         if [ $version_exit_code -ne 0 ]; then
           error_message="❌ ERROR: Failed to update package version. Check if the version format is valid. Error: $version_output"
           echo "$error_message"
-          echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
+          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
           exit 1
         fi
 
-        # Publish package based on detected package manager
-        case "$package_manager" in
-          "yarn")
-            publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version --skip-check-working-tree 2>&1)
-            publish_exit_code=$?
-            if [ $publish_exit_code -ne 0 ]; then
-              error_message="❌ ERROR: Failed to publish package with yarn. Error: $publish_output"
-              echo "$error_message"
-              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
-              exit 1
-            fi
-            ;;
-          "pnpm")
-            publish_output=$(pnpm publish --no-git-checks --access public --tag pr 2>&1)
-            publish_exit_code=$?
-            if [ $publish_exit_code -ne 0 ]; then
-              error_message="❌ ERROR: Failed to publish package with pnpm. Error: $publish_output"
-              echo "$error_message"
-              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
-              exit 1
-            fi
-            ;;
-          *)
-            publish_output=$(npm publish --access public --tag pr 2>&1)
-            publish_exit_code=$?
-            if [ $publish_exit_code -ne 0 ]; then
-              error_message="❌ ERROR: Failed to publish package with npm. Error: $publish_output"
-              echo "$error_message"
-              echo "error-message=$(sanitize_error "$error_message")" >> $GITHUB_OUTPUT
-              exit 1
-            fi
-            ;;
-        esac
+        # Publish package
+        if [ -z "$INPUT_NPM_TOKEN" ]; then
+          echo "📦 Publishing with OIDC trusted publishing..."
 
-        echo "✅ Successfully published $package_name@$version using $package_manager"
+          publish_output=$(npm publish --access public --tag pr --provenance 2>&1)
+          publish_exit_code=$?
+
+          if [ $publish_exit_code -ne 0 ]; then
+            handle_publish_error "OIDC" "$publish_output"
+          fi
+          echo "✅ Successfully published $package_name@$version using OIDC"
+        else
+          # Token mode: use detected package manager
+          case "$package_manager" in
+            "yarn")
+              publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version --skip-check-working-tree 2>&1)
+              publish_exit_code=$?
+              if [ $publish_exit_code -ne 0 ]; then
+                handle_publish_error "yarn" "$publish_output"
+              fi
+              ;;
+            "pnpm")
+              publish_output=$(pnpm publish --no-git-checks --access public --tag pr 2>&1)
+              publish_exit_code=$?
+              if [ $publish_exit_code -ne 0 ]; then
+                handle_publish_error "pnpm" "$publish_output"
+              fi
+              ;;
+            *)
+              publish_output=$(npm publish --access public --tag pr 2>&1)
+              publish_exit_code=$?
+              if [ $publish_exit_code -ne 0 ]; then
+                handle_publish_error "npm" "$publish_output"
+              fi
+              ;;
+          esac
+          echo "✅ Successfully published $package_name@$version using $package_manager"
+        fi
       env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+        # CRITICAL: Use INPUT_NPM_TOKEN instead of NPM_TOKEN here to avoid
+        # setting NPM_TOKEN in the environment when empty (which could break OIDC)
+        INPUT_NPM_TOKEN: ${{ inputs.npm-token }}
         PR: ${{ github.event.number }}
         SHA: ${{ github.event.pull_request.head.sha }}
 
@@ -173,6 +220,10 @@ runs:
         message: |
           ✅ **PR package published successfully!**
 
-          Install with: <code>npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}</code>
+          Install:
+
+              npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}
+
+          View on npm: https://www.npmjs.com/package/${{ steps.publish.outputs.package-name }}/v/${{ steps.publish.outputs.version }}
         upsert: true
         tag: ${{ inputs.comment-tag }}

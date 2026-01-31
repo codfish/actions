@@ -90,10 +90,9 @@ When using these GitHub Actions in your workflows:
 
 ```yaml
 # ✅ Good - Using secrets properly
-- uses: codfish/actions/npm-pr-version@v2
+- uses: codfish/actions/npm-pr-version@v3
   with:
     npm-token: ${{ secrets.NPM_TOKEN }}
-    github-token: ${{ secrets.GITHUB_TOKEN }}
 
 # ❌ Bad - Exposing secrets
 - name: Debug
@@ -107,10 +106,10 @@ When using these GitHub Actions in your workflows:
 
 ```yaml
 # ✅ Good - Pinned version
-- uses: codfish/actions/setup-node-and-install@v2.2.3
+- uses: codfish/actions/setup-node-and-install@v3.2.3
 
 # ⚠️ Caution - Latest main (testing only)
-- uses: codfish/actions/setup-node-and-install@main
+- uses: codfish/actions/setup-node-and-install@v3
 ```
 
 ### 🔍 Workflow Permissions

@@ -16,11 +16,25 @@ inputs:
   working-directory:
     description: Directory containing package.json and lockfile.
     default: .
+  upgrade-npm:
+    description:
+      Whether to upgrade npm to v11.5.1. This is required for OIDC trusted publishing but can be disabled if you want to
+      shave off some run time and you are still using token-based authentication.
+    default: true
 
 outputs:
+  node-version:
+    description: The installed node version.
+    value: ${{ steps.setup-node.outputs.node-version }}
   cache-hit:
     description: Whether the dependency cache was hit (true/false).
     value: "${{ steps.setup-node.outputs.cache-hit == 'true' && 'true' || 'false' }}"
+  pnpm-dest:
+    description: Expanded path of pnpm dest.
+    value: ${{ steps.pnpm-setup.outputs.dest }}
+  pnpm-bin-dest:
+    description: Location of pnpm and pnpx command.
+    value: ${{ steps.pnpm-setup.outputs.bin_dest }}
 
 runs:
   using: composite
@@ -64,6 +78,7 @@ runs:
     - name: Install pnpm
       if: steps.detect-package-manager.outputs.package-manager == 'pnpm'
       uses: pnpm/action-setup@v4
+      id: pnpm-setup
       with:
         run_install: false
 
@@ -107,14 +122,26 @@ runs:
         INPUT_NODE_VERSION: ${{ inputs.node-version }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       id: setup-node
       with:
         # use detected package manager cache
         cache: ${{ steps.detect-package-manager.outputs.package-manager }}
         cache-dependency-path: ${{ inputs.working-directory }}
         node-version: ${{ steps.detect-node-version.outputs.version }}
-        registry-url: 'https://registry.npmjs.org'
+        registry-url: 'https://registry.npmjs.org/'
+
+    - name: Upgrade npm for OIDC support
+      if: inputs.upgrade-npm == 'true'
+      shell: bash
+      run: |
+        echo "📦 Current npm version: $(npm --version)"
+        echo "🔄 Upgrading npm to v11 (required for OIDC trusted publishing)..."
+        if ! npm install -g npm@^11.5.1; then
+          echo "❌ Failed to upgrade npm to v11.5.1. Check network access or permissions."
+          exit 1
+        fi
+        echo "✅ Updated to npm version: $(npm --version)"
 
     # Apply `./node_modules` cache only if a lockfile is present and using `npm`
     # Will remove the need to run install commands twice. Risk reduced by using a very specific cache key.
