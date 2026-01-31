@@ -21,7 +21,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          allowed_bots: "renovate[bot],dependabot[bot],cursor[bot]"
+          allowed_bots: 'renovate[bot],dependabot[bot],cursor[bot]'
 
           # Enable progress tracking
           track_progress: true
