@@ -25,6 +25,8 @@ jobs:
 
           # Enable progress tracking
           track_progress: true
+          show_full_output: true
+          debug: true
 
           # Your custom review instructions
           prompt: |
