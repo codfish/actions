@@ -5,15 +5,7 @@
   "author": "Chris O'Donnell <chris@codfish.dev>",
   "license": "MIT",
   "version": "0.0.0-semantically-released",
-  "publishConfig": {
-    "access": "public"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "volta": {
-    "node": "24.8.0"
-  },
+  "private": true,
   "scripts": {
     "lint": "eslint .",
     "fix": "eslint . --fix",
