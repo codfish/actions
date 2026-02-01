@@ -25,8 +25,8 @@ Reference actions using the following format:
 
 ```yaml
 uses: codfish/actions/{action-name}@main
-uses: codfish/actions/{action-name}@v2
-uses: codfish/actions/{action-name}@v2.0.1
+uses: codfish/actions/{action-name}@v3
+uses: codfish/actions/{action-name}@v3.0.1
 uses: codfish/actions/{action-name}@feature-branch
 uses: codfish/actions/{action-name}@aff1a9d
 ```
@@ -51,7 +51,7 @@ Creates or updates a comment in a pull request with optional tagging for upsert 
 
 ```yaml
 - name: Comment on PR
-  uses: codfish/actions/comment@v2
+  uses: codfish/actions/comment@v3
   with:
     message: '✅ Build successful!'
     tag: 'build-status'
@@ -60,17 +60,16 @@ Creates or updates a comment in a pull request with optional tagging for upsert 
 
 ### [npm-pr-version](./npm-publish-pr/)
 
-Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) and
-automatically comments on PR
+Publishes package with PR-specific version (0.0.0-PR-123--abc1234) using detected package manager (npm/yarn/pnpm) or
+OIDC trusted publishing, and automatically comments on PR
 
 **Inputs:**
 
-| Input          | Description                                                                         | Required | Default          |
-| -------------- | ----------------------------------------------------------------------------------- | -------- | ---------------- |
-| `npm-token`    | Registry authentication token with publish permissions (works with npm/yarn/pnpm)   | Yes      | -                |
-| `github-token` | GitHub token with pull request comment permissions (typically secrets.GITHUB_TOKEN) | Yes      | -                |
-| `comment`      | Whether to comment on the PR with the published version (true/false)                | No       | `true`           |
-| `comment-tag`  | Tag to use for PR comments (for comment identification and updates)                 | No       | `npm-publish-pr` |
+| Input         | Description                                                                                                    | Required | Default          |
+| ------------- | -------------------------------------------------------------------------------------------------------------- | -------- | ---------------- |
+| `npm-token`   | Registry authentication token with publish permissions. If not provided, OIDC trusted publishing will be used. | No       | -                |
+| `comment`     | Whether to comment on the PR with the published version (true/false)                                           | No       | `true`           |
+| `comment-tag` | Tag to use for PR comments (for comment identification and updates)                                            | No       | `npm-publish-pr` |
 
 **Outputs:**
 
@@ -83,19 +82,18 @@ automatically comments on PR
 **Usage:**
 
 ```yaml
+permissions:
+  id-token: write
+  pull-requests: write
+
 steps:
   - uses: actions/checkout@v6
 
-  - uses: codfish/actions/setup-node-and-install@v2
-    with:
-      node-version: lts/*
+  - uses: codfish/actions/setup-node-and-install@v3
 
   - run: npm run build
 
-  - uses: codfish/actions/npm-pr-version@v2
-    with:
-      npm-token: ${{ secrets.NPM_TOKEN }}
-      github-token: ${{ secrets.GITHUB_TOKEN }}
+  - uses: codfish/actions/npm-pr-version@v3
 ```
 
 ### [setup-node-and-install](./setup-node-and-install/)
@@ -105,17 +103,21 @@ intelligent caching, and version detection via input, .node-version, .nvmrc, or 
 
 **Inputs:**
 
-| Input               | Description                                                                                                                          | Required | Default |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------- |
-| `node-version`      | Node.js version to install (e.g. "24", "lts/\*"). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node. | No       | -       |
-| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install.                                                                         | No       | -       |
-| `working-directory` | Directory containing package.json and lockfile.                                                                                      | No       | `.`     |
+| Input               | Description                                                                                                                                                                                    | Required | Default |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `node-version`      | Node.js version to install (e.g. "24", "lts/\*"). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node.                                                           | No       | -       |
+| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install.                                                                                                                                   | No       | -       |
+| `working-directory` | Directory containing package.json and lockfile.                                                                                                                                                | No       | `.`     |
+| `upgrade-npm`       | Whether to upgrade npm to v11.5.1. This is required for OIDC trusted publishing but can be disabled if you want to shave off some run time and you are still using token-based authentication. | No       | `true`  |
 
 **Outputs:**
 
-| Output      | Description                                        |
-| ----------- | -------------------------------------------------- |
-| `cache-hit` | Whether the dependency cache was hit (true/false). |
+| Output          | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `node-version`  | The installed node version.                        |
+| `cache-hit`     | Whether the dependency cache was hit (true/false). |
+| `pnpm-dest`     | Expanded path of pnpm dest.                        |
+| `pnpm-bin-dest` | Location of pnpm and pnpx command.                 |
 
 **Usage:**
 
@@ -124,10 +126,10 @@ steps:
   - uses: actions/checkout@v6
 
   # Will setup node, inferring node version from your codebase & installing your dependencies
-  - uses: codfish/actions/setup-node-and-install@v2
+  - uses: codfish/actions/setup-node-and-install@v3
 
   # Or if you want to be explicit
-  - uses: codfish/actions/setup-node-and-install@v2
+  - uses: codfish/actions/setup-node-and-install@v3
     with:
       node-version: 24.4
 
@@ -147,37 +149,39 @@ Each action follows these conventions:
 
 ## Example Workflow
 
-Complete workflow using multiple actions together:
+Complete workflow using multiple actions together with OIDC trusted publishing:
 
 ```yaml
-name: CI/CD Pipeline
-on:
-  pull_request:
-    types: [opened, synchronize]
+name: Validate
+
+on: pull_request_target
+
+permissions:
+  id-token: write # For npm trusted publishing to work
+  pull-requests: write # For commenting on PR's
 
 jobs:
   test-and-publish:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v6
 
-      - uses: codfish/actions/setup-node-and-install@v2
-        with:
-          node-version: 'lts/*'
+      - uses: codfish/actions/setup-node-and-install@v3
 
       - name: Run tests
+        id: test
         run: |
-          npm test 2>&1 | tee test-output.txt
+          pnpm test 2>&1 | tee test-output.txt
           if grep -q "All tests passed" test-output.txt; then
             echo "status=✅ passed" >> $GITHUB_OUTPUT
           else
             echo "status=❌ failed" >> $GITHUB_OUTPUT
           fi
           echo "count=$(grep -c "✓\|√\|PASS" test-output.txt || echo "unknown")" >> $GITHUB_OUTPUT
-        id: test
 
       - name: Build package
-        run: npm run build
+        run: pnpm build
 
       - name: Calculate build size
         run: |
@@ -193,7 +197,7 @@ jobs:
           echo "size=$size" >> $GITHUB_OUTPUT
         id: build
 
-      - uses: codfish/actions/comment@v2
+      - uses: codfish/actions/comment@v3
         with:
           message: |
             ## 🚀 **Build Summary**
@@ -206,9 +210,7 @@ jobs:
           tag: 'build-summary'
           upsert: true
 
-      - uses: codfish/actions/npm-pr-version@v2
+      - uses: codfish/actions/npm-pr-version@v3
         with:
-          npm-token: ${{ secrets.NPM_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           comment-tag: 'pr-package'
 ```

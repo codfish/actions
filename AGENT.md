@@ -57,13 +57,18 @@ This project uses **pnpm** as the package manager. All commands should use pnpm:
 
 ## Current Actions
 
-- `npm-pr-version` - Publishes packages with PR-specific version numbers using detected package manager (npm/yarn/pnpm)
-  for testing in downstream apps before merging
+- `npm-pr-version` - Publishes packages with PR-specific version numbers for testing in downstream apps before merging.
+  Supports both **OIDC trusted publishing** (recommended for public packages) and token-based authentication (for
+  private packages). Automatically detects package manager (npm/yarn/pnpm) for token mode.
+  - **IMPORTANT for OIDC**: Job must include `permissions: { id-token: write, pull-requests: write }`
+  - **IMPORTANT for token mode**: Job must include `permissions: { pull-requests: write }`
+  - **Requires npm 11.5.1+** for OIDC (automatically provided by `setup-node-and-install@v3`)
 - `comment` - Creates or updates pull request comments with intelligent upsert functionality using unique tags
   - **IMPORTANT**: Any job using the comment action must include `permissions: pull-requests: write`
 - `setup-node-and-install` - Sets up Node.js environment and installs dependencies with automatic package manager
   detection, intelligent caching, and dynamic Node version detection via input, `.node-version`, `.nvmrc`, or
-  `package.json` `volta.node`. Validation is relaxed; the action no longer fails when no version is detected.
+  `package.json` `volta.node`. **Automatically upgrades npm to v11** (pinned to `^11.5.1`) to ensure OIDC trusted
+  publishing compatibility. Validation is relaxed; the action no longer fails when no version is detected.
 
 ## Testing
 
