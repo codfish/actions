@@ -26,7 +26,7 @@
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1"
   },
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "pnpm@10.28.2",
   "commitlint": {
     "extends": [
       "./node_modules/@codfish/eslint-config/commitlint.js"
