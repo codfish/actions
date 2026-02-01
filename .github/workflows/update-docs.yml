@@ -33,7 +33,7 @@ jobs:
         run: pnpm docs:generate
 
       - name: Create pull request with updates
-        uses: peter-evans/create-pull-request@6699836a213cf8b28c4f0408a404a6ac79d4458a # v8.1.0
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
         with:
           commit-message: 'docs: auto-update documentation with latest action metadata'
           title: >-
