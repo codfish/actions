@@ -3,7 +3,7 @@
 A collection of reusable GitHub Actions for common development workflows. Each action is self-contained and designed for
 maximum reusability across different projects.
 
-<!-- prettier-ignore-start -->
+<!-- eslint-disable -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
@@ -19,7 +19,7 @@ maximum reusability across different projects.
   - [Test pull requests in downstream apps before merging](#test-pull-requests-in-downstream-apps-before-merging)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- prettier-ignore-end -->
+<!-- eslint-enable -->
 
 ## Usage
 

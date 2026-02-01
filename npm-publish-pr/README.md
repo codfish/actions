@@ -273,7 +273,7 @@ This error typically occurs when using OIDC trusted publishing and indicates one
 
 **Symptom:**
 
-```
+```sh
 npm notice Access token expired or revoked. Please try logging in again.
 npm error code E404
 npm error 404 Not Found - PUT https://registry.npmjs.org/@your-package
@@ -328,7 +328,7 @@ authentication:
 
 **Symptom:**
 
-```
+```sh
 npm ERR! --provenance flag is not supported
 ```
 
@@ -356,13 +356,13 @@ To debug OIDC authentication issues, check the workflow logs for:
 
 1. **OIDC environment variables** - Should see:
 
-   ```
+   ```txt
    🔐 Using OIDC trusted publishing (no npm-token provided)
    ```
 
 2. **npm version** - Should be 11.5.1 or higher:
 
-   ```
+   ```txt
    npm version: 11.5.1
    ```
 
