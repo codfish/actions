@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-docs:
@@ -31,9 +32,15 @@ jobs:
       - name: Generate updated documentation
         run: pnpm docs:generate
 
-      - name: Commit and push changes if any
-        uses: stefanzweifel/git-auto-commit-action@v7
+      - name: Create pull request with updates
+        uses: peter-evans/create-pull-request@6699836a213cf8b28c4f0408a404a6ac79d4458a # v8.1.0
         with:
-          commit_options: --no-verify --signoff
-          commit_message: 'docs: auto-update documentation with latest action metadata'
-          file_pattern: 'README.md */README.md'
+          commit-message: 'docs: auto-update documentation with latest action metadata'
+          title: >-
+            docs: auto-update documentation with latest action metadata
+          body: Automated documentation update.
+          branch: automation/update-docs
+          delete-branch: true
+          add-paths: |
+            README.md
+            */README.md
