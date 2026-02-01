@@ -15,6 +15,8 @@ maximum reusability across different projects.
   - [setup-node-and-install](#setup-node-and-install)
 - [Contributing](#contributing)
 - [Example Workflow](#example-workflow)
+- [Maintenance](#maintenance)
+  - [Test pull requests in downstream apps before merging](#test-pull-requests-in-downstream-apps-before-merging)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 <!-- prettier-ignore-end -->
@@ -213,4 +215,26 @@ jobs:
       - uses: codfish/actions/npm-pr-version@v3
         with:
           comment-tag: 'pr-package'
+```
+
+## Maintenance
+
+> Make the new release available to those binding to the major version tag: Move the major version tag (v3, v4, etc.) to
+> point to the ref of the current release. This will act as the stable release for that major version. You should keep
+> this tag updated to the most recent stable minor/patch release.
+
+```sh
+git tag -fa v3 -m "Update v3 tag" && git push origin v3 --force
+```
+
+**Reference**: https://github.com/actions/toolkit/blob/main/docs/action-versioning.md#recommendations
+
+### Test pull requests in downstream apps before merging
+
+Our validation workflow builds and publishes a multi-arch Docker image to GitHub Container Registry for every pull
+request, tagging the image with the PR's branch name. You can point downstream repositories at this branch-tagged image
+to try changes before merging.
+
+```yml
+- uses: codfish/actions:<branch-name>
 ```
