@@ -150,7 +150,7 @@ runs:
       if:
         steps.detect-package-manager.outputs.lockfile-exists == 'true' &&
         steps.detect-package-manager.outputs.package-manager == 'npm'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache
       with:
         path: ${{ inputs.working-directory }}/node_modules
