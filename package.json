@@ -7,9 +7,8 @@
   "version": "0.0.0-semantically-released",
   "private": true,
   "scripts": {
-    "lint": "eslint .",
-    "fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{json,css,md,yml}\" --config ./node_modules/@codfish/eslint-config/prettier.js",
+    "lint": "eslint",
+    "format": "eslint --fix",
     "test": "bash tests/scripts/test-runner.sh",
     "test:integration": "bash tests/scripts/test-runner.sh integration",
     "test:unit": "bash tests/scripts/test-runner.sh unit",
@@ -17,14 +16,13 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@codfish/eslint-config": "^12.2.0",
+    "@codfish/eslint-config": "0.0.0-PR-132--1df6820",
     "bats": "^1.13.0",
     "doctoc": "^2.2.1",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.0",
-    "lint-staged": "^16.2.7",
-    "prettier": "^3.8.1"
+    "lint-staged": "^16.2.7"
   },
   "packageManager": "pnpm@10.28.2",
   "commitlint": {
@@ -33,11 +31,7 @@
     ]
   },
   "lint-staged": {
-    "*.{json,css}": [
-      "prettier --write --config ./node_modules/@codfish/eslint-config/prettier.js"
-    ],
     "*.md": [
-      "prettier --write --config ./node_modules/@codfish/eslint-config/prettier.js",
       "doctoc --title '## Table of Contents'"
     ]
   }
