@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
-import yaml from 'js-yaml';
+import yml from 'js-yaml';
 import path from 'path';
 
 /**
@@ -37,7 +37,7 @@ class DocumentationGenerator {
 
     try {
       const content = fs.readFileSync(actionFile, 'utf8');
-      const actionData = yaml.load(content);
+      const actionData = yml.load(content);
 
       return {
         directory: dirName,
@@ -68,12 +68,12 @@ class DocumentationGenerator {
 
       // Look for usage examples in various sections
       const patterns = [
-        // Look for "## Usage" section with yaml code block
-        /## Usage[\s\S]*?```yaml\n([\s\S]*?)\n```/i,
-        // Look for any yaml code block with "uses: "
-        /```yaml\n([\s\S]*?uses:\s*[.\w/-]+[\s\S]*?)\n```/i,
+        // Look for "## Usage" section with yml code block
+        /## Usage[\s\S]*?```yml\n([\s\S]*?)\n```/i,
+        // Look for any yml code block with "uses: "
+        /```yml\n([\s\S]*?uses:\s*[.\w/-]+[\s\S]*?)\n```/i,
         // Look for specific action usage
-        new RegExp(`\`\`\`yaml\\n([\\s\\S]*?uses:\\s*[^\\n]*${dirName}[\\s\\S]*?)\\n\`\`\``, 'i'),
+        new RegExp(`\`\`\`yml\\n([\\s\\S]*?uses:\\s*[^\\n]*${dirName}[\\s\\S]*?)\\n\`\`\``, 'i'),
       ];
 
       for (const pattern of patterns) {
@@ -180,7 +180,7 @@ class DocumentationGenerator {
 
     // Add usage example
     if (usageExample) {
-      section += `**Usage:**\n\n\`\`\`yaml\n${usageExample}\n\`\`\`\n\n`;
+      section += `**Usage:**\n\n\`\`\`yml\n${usageExample}\n\`\`\`\n\n`;
     }
 
     return section;

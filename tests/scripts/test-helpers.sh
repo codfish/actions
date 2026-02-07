@@ -103,11 +103,25 @@ assert_file_exists() {
 assert_env_set() {
     local var_name="$1"
     local var_value="${!var_name}"
-    
+
     if [ -n "$var_value" ]; then
         return 0
     else
         echo "Expected environment variable to be set: $var_name"
+        return 1
+    fi
+}
+
+# Check if action output does NOT contain expected value
+refute_output_contains() {
+    local unexpected="$1"
+    local actual="$2"
+
+    if [[ "$actual" != *"$unexpected"* ]]; then
+        return 0
+    else
+        echo "Expected output NOT to contain: $unexpected"
+        echo "Actual output: $actual"
         return 1
     fi
 }

