@@ -62,6 +62,27 @@ runs:
         if [ -n "$INPUT_TARBALL" ]; then
           tarball_mode=true
           echo "🔒 SECURE MODE: Using pre-built tarball (lifecycle scripts will NOT execute)"
+
+          # Expand glob patterns (e.g., *.tgz) to actual filename
+          shopt -s nullglob
+          tarball_files=($INPUT_TARBALL)
+          shopt -u nullglob
+
+          if [ ${#tarball_files[@]} -eq 0 ]; then
+            error_message="❌ ERROR: No tarball files found matching pattern: $INPUT_TARBALL"
+            echo "$error_message"
+            echo "error-message=$error_message" >> $GITHUB_OUTPUT
+            exit 1
+          elif [ ${#tarball_files[@]} -gt 1 ]; then
+            error_message="❌ ERROR: Multiple tarball files found matching pattern: $INPUT_TARBALL (found: ${tarball_files[*]}). Please specify a single tarball file."
+            echo "$error_message"
+            echo "error-message=$error_message" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Use the resolved tarball path
+          INPUT_TARBALL="${tarball_files[0]}"
+          echo "📦 Resolved tarball: $INPUT_TARBALL"
         fi
 
         # Function to extract relevant error message from npm output
@@ -107,11 +128,15 @@ runs:
 
           echo "📦 Extracting package info from tarball: $INPUT_TARBALL"
 
+          # Create secure temporary file with proper permissions
+          temp_pkg_json=$(mktemp)
+          trap 'rm -f "$temp_pkg_json"' EXIT
+
           # Extract package.json from tarball to get name and version
           # Note: Use -O without --wildcards for BSD tar (macOS) compatibility
-          tar -xzf "$INPUT_TARBALL" -O package/package.json > /tmp/package.json.tarball 2>/dev/null
+          tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
 
-          if [ ! -s /tmp/package.json.tarball ]; then
+          if [ ! -s "$temp_pkg_json" ]; then
             error_message="❌ ERROR: Could not extract package.json from tarball"
             echo "$error_message"
             echo "error-message=$error_message" >> $GITHUB_OUTPUT
@@ -119,7 +144,7 @@ runs:
           fi
 
           # Get package name from tarball
-          package_name=$(jq -r '.name // empty' /tmp/package.json.tarball)
+          package_name=$(jq -r '.name // empty' "$temp_pkg_json")
           if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
             error_message="❌ ERROR: Tarball's package.json must have a 'name' field"
             echo "$error_message"
@@ -128,7 +153,7 @@ runs:
           fi
 
           # Get version from tarball
-          version=$(jq -r '.version // empty' /tmp/package.json.tarball)
+          version=$(jq -r '.version // empty' "$temp_pkg_json")
           if [ -z "$version" ] || [ "$version" = "null" ]; then
             error_message="❌ ERROR: Tarball's package.json must have a 'version' field"
             echo "$error_message"

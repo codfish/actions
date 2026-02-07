@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to this repository.
 
-<!-- prettier-ignore-start -->
+<!-- eslint-disable -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
@@ -34,11 +34,9 @@ Thank you for your interest in contributing! This document provides guidelines f
   - [PR Requirements](#pr-requirements)
   - [Review Process](#review-process)
 - [Action Ideas](#action-ideas)
-- [Getting Help](#getting-help)
-- [Recognition](#recognition)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- prettier-ignore-end -->
+<!-- eslint-enable -->
 
 ## Code of Conduct
 
@@ -101,7 +99,7 @@ git commit -m "docs(npm-pr-version): update README with new examples"
 
 Each action should be in its own directory at the repository root:
 
-```
+```txt
 action-name/
 ├── action.yml          # Action definition
 ├── README.md          # Action documentation
@@ -116,7 +114,7 @@ action-name/
 
 ### Action Definition (action.yml)
 
-```yaml
+```yml
 name: action-name
 description: Clear, concise description of what the action does
 
@@ -174,7 +172,7 @@ When applicable, detect package managers in this order:
 
 ### Test Structure
 
-```
+```txt
 tests/
 ├── integration/           # Full action tests
 │   └── action-name/
@@ -298,19 +296,3 @@ Looking for contribution ideas? Here are some actions that would be valuable:
 - `cache-restore-save` - Advanced caching patterns
 - `monorepo-changed` - Detect changed packages in monorepos
 - `performance-test` - Lighthouse/performance testing
-
-## Getting Help
-
-- **GitHub Discussions**: Ask questions and discuss ideas
-- **Issues**: Report bugs or request features
-- **Discord/Slack**: [Link if available]
-
-## Recognition
-
-Contributors will be recognized in:
-
-- Commit messages with `Co-authored-by`
-- Release notes
-- Contributors section (if added)
-
-Thank you for contributing! 🎉

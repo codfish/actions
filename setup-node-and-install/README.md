@@ -18,7 +18,7 @@ This action provides the following functionality:
 
 See [action.yml](action.yml).
 
-```yaml
+```yml
 steps:
   - uses: actions/checkout@v6
 
@@ -48,7 +48,7 @@ additional options.
 v18.14.1
 ```
 
-```yaml
+```yml
 steps:
   - uses: actions/checkout@v6
   # will install Node v18.14.1
@@ -63,7 +63,7 @@ steps:
 20.10.0
 ```
 
-```yaml
+```yml
 steps:
   - uses: actions/checkout@v6
   # will install Node v20.10.0
@@ -118,7 +118,7 @@ breaking changes while still receiving patch and minor updates within v11.
 
 ### With specific Node version
 
-```yaml
+```yml
 - uses: codfish/actions/setup-node-and-install@v3
   with:
     node-version: '18'
@@ -126,7 +126,7 @@ breaking changes while still receiving patch and minor updates within v11.
 
 ### With pnpm in subdirectory
 
-```yaml
+```yml
 - uses: codfish/actions/setup-node-and-install@v3
   with:
     working-directory: './frontend'
