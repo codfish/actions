@@ -49,14 +49,14 @@ tokens.
    ```diff
     on: pull_request_target
 
-   +permissions:
-   +  contents: read
-   +  id-token: write
-   +  pull-requests: write
-
     jobs:
       publish:
         runs-on: ubuntu-latest
+
+   +    permissions:
+   +      contents: read
+   +      id-token: write
+   +      pull-requests: write
 
         steps:
    +      # Use v3 for automatic npm 11.5.1+ upgrade
@@ -79,48 +79,100 @@ See [action.yml](action.yml).
 
 No npm token required! Just configure your package on npmjs.com for trusted publishing.
 
-```yaml
-permissions:
-  id-token: write
-  pull-requests: write
+```yml
+on: pull_request
 
-steps:
-  - uses: actions/checkout@v6
+jobs:
+  publish:
+    permissions:
+      id-token: write
+      pull-requests: write
 
-  - uses: codfish/actions/setup-node-and-install@v3
-    with:
-      node-version: lts/*
+    steps:
+      - uses: actions/checkout@v6
 
-  - run: npm run build
+      - uses: codfish/actions/setup-node-and-install@v3
+        with:
+          node-version: lts/*
 
-  - uses: codfish/actions/npm-pr-version@v3
+      - run: npm run build
+
+      - uses: codfish/actions/npm-pr-version@v3
 ```
 
 > **Note:** `setup-node-and-install@v3` automatically upgrades npm to v11 (required for OIDC).
 
 ### Token-Based Authentication (For Private Packages)
 
-```yaml
-permissions:
-  pull-requests: write
+```yml
+on: pull_request
 
-steps:
-  - uses: actions/checkout@v6
+jobs:
+  publish:
+    permissions:
+      pull-requests: write
 
-  - uses: codfish/actions/setup-node-and-install@v3
-    with:
-      node-version: lts/*
+    steps:
+      - uses: actions/checkout@v6
 
-  - run: npm run build
+      - uses: codfish/actions/setup-node-and-install@v3
+        with:
+          node-version: lts/*
 
-  - uses: codfish/actions/npm-pr-version@v3
-    with:
-      npm-token: ${{ secrets.NPM_TOKEN }}
+      - run: npm run build
+
+      - uses: codfish/actions/npm-pr-version@v3
+        with:
+          npm-token: ${{ secrets.NPM_TOKEN }}
 ```
+
+### Tarball Mode (Secure for pull_request_target)
+
+For `pull_request_target` workflows, use tarball mode to prevent execution of malicious lifecycle scripts from untrusted
+PRs:
+
+```yml
+on: pull_request_target
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: codfish/actions/setup-node-and-install@v3
+      - run: npm run build
+      - run: npm pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-tarball
+          path: '*.tgz'
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+
+      - uses: codfish/actions/npm-pr-version@v3
+        with:
+          tarball: '*.tgz' # Publishes with --ignore-scripts
+```
+
+> **Security:** Tarball mode automatically uses `--ignore-scripts` to prevent lifecycle script execution. See
+> [SECURITY.md](../SECURITY.md#npm-publishing-npm-pr-version) for complete security considerations.
 
 ### Disable PR Comments
 
-```yaml
+```yml
 - uses: codfish/actions/npm-pr-version@v3
   with:
     npm-token: ${{ secrets.NPM_TOKEN }}
@@ -129,7 +181,7 @@ steps:
 
 ### Custom Comment Tag
 
-```yaml
+```yml
 - uses: codfish/actions/npm-pr-version@v3
   with:
     npm-token: ${{ secrets.NPM_TOKEN }}
@@ -140,19 +192,19 @@ steps:
 
 ### With OIDC (Recommended)
 
-```yaml
+```yml
 name: PR Package Testing
 
 on: pull_request_target
 
-permissions:
-  contents: read
-  id-token: write
-  pull-requests: write
-
 jobs:
   publish-pr-package:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -168,18 +220,19 @@ jobs:
 
 ### With Token (Private Packages)
 
-```yaml
+```yml
 name: PR Package Testing
 
 on: pull_request_target
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   publish-pr-package:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v6
 
@@ -208,11 +261,12 @@ The package is published under the `pr` tag, so it won't interfere with your reg
 
 <!-- start inputs -->
 
-| Input         | Description                                                                                                    | Required | Default          |
-| ------------- | -------------------------------------------------------------------------------------------------------------- | -------- | ---------------- |
-| `npm-token`   | Registry authentication token with publish permissions. If not provided, OIDC trusted publishing will be used. | No       | -                |
-| `comment`     | Whether to comment on the PR with the published version (true/false)                                           | No       | `true`           |
-| `comment-tag` | Tag to use for PR comments (for comment identification and updates)                                            | No       | `npm-publish-pr` |
+| Input         | Description                                                                                                                                                                                                                        | Required | Default          |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------- |
+| `npm-token`   | Registry authentication token with publish permissions. If not provided, OIDC trusted publishing will be used.                                                                                                                     | No       | -                |
+| `tarball`     | Path to pre-built tarball to publish (e.g., '\*.tgz'). When provided, publishes the tarball with --ignore-scripts for security. Recommended for pull_request_target workflows to prevent execution of malicious lifecycle scripts. | No       | -                |
+| `comment`     | Whether to comment on the PR with the published version (true/false)                                                                                                                                                               | No       | `true`           |
+| `comment-tag` | Tag to use for PR comments (for comment identification and updates)                                                                                                                                                                | No       | `npm-publish-pr` |
 
 <!-- end inputs -->
 
@@ -273,7 +327,7 @@ This error typically occurs when using OIDC trusted publishing and indicates one
 
 **Symptom:**
 
-```
+```txt
 npm notice Access token expired or revoked. Please try logging in again.
 npm error code E404
 npm error 404 Not Found - PUT https://registry.npmjs.org/@your-package
@@ -281,11 +335,9 @@ npm error 404 Not Found - PUT https://registry.npmjs.org/@your-package
 
 **Solution:** Add `id-token: write` permission to your workflow:
 
-```yaml
+```yml
 permissions:
-  contents: read
   id-token: write # REQUIRED for OIDC!
-  pull-requests: write
 ```
 
 Without this permission, GitHub cannot generate the OIDC token needed for npm trusted publishing.
@@ -306,7 +358,7 @@ Without this permission, GitHub cannot generate the OIDC token needed for npm tr
 
 **Solution:** OIDC tokens are not available for forked PRs. Add a condition to skip publishing:
 
-```yaml
+```yml
 - uses: codfish/actions/npm-pr-version@v3
   if: github.event.pull_request.head.repo.full_name == github.repository
 ```
@@ -318,7 +370,7 @@ Without this permission, GitHub cannot generate the OIDC token needed for npm tr
 **Solution:** OIDC trusted publishing only works with **public packages**. For private packages, use token-based
 authentication:
 
-```yaml
+```yml
 - uses: codfish/actions/npm-pr-version@v3
   with:
     npm-token: ${{ secrets.NPM_TOKEN }}
@@ -328,14 +380,14 @@ authentication:
 
 **Symptom:**
 
-```
+```txt
 npm ERR! --provenance flag is not supported
 ```
 
 **Solution:** OIDC trusted publishing requires npm 11.5.1+. Use `setup-node-and-install@v3` which automatically upgrades
 npm to v11 for you:
 
-```yaml
+```yml
 - uses: codfish/actions/setup-node-and-install@v3
   with:
     node-version: lts/*
@@ -346,7 +398,7 @@ compatibility.
 
 **Manual alternative:** If not using the setup action, upgrade npm yourself:
 
-```yaml
+```yml
 - run: npm install -g npm@^11.5.1
 ```
 
@@ -356,15 +408,15 @@ To debug OIDC authentication issues, check the workflow logs for:
 
 1. **OIDC environment variables** - Should see:
 
-   ```
+```txt
    🔐 Using OIDC trusted publishing (no npm-token provided)
-   ```
+```
 
 2. **npm version** - Should be 11.5.1 or higher:
 
-   ```
+```txt
    npm version: 11.5.1
-   ```
+```
 
 3. **Verify permissions** - Check workflow run permissions in GitHub UI
 

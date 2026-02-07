@@ -3,7 +3,7 @@
 A collection of reusable GitHub Actions for common development workflows. Each action is self-contained and designed for
 maximum reusability across different projects.
 
-<!-- prettier-ignore-start -->
+<!-- eslint-disable -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
@@ -19,18 +19,18 @@ maximum reusability across different projects.
   - [Test pull requests in downstream apps before merging](#test-pull-requests-in-downstream-apps-before-merging)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-<!-- prettier-ignore-end -->
+<!-- eslint-enable -->
 
 ## Usage
 
 Reference actions using the following format:
 
-```yaml
+```yml
 uses: codfish/actions/{action-name}@main
 uses: codfish/actions/{action-name}@v3
 uses: codfish/actions/{action-name}@v3.0.1
 uses: codfish/actions/{action-name}@feature-branch
-uses: codfish/actions/{action-name}@aff1a9d
+uses: codfish/actions/{action-name}@9f7cf1a3ff9f2838eff5ec9ac69b6ff277610bb2
 ```
 
 ## Available Actions
@@ -51,13 +51,8 @@ Creates or updates a comment in a pull request with optional tagging for upsert 
 
 **Usage:**
 
-```yaml
-- name: Comment on PR
-  uses: codfish/actions/comment@v3
-  with:
-    message: '✅ Build successful!'
-    tag: 'build-status'
-    upsert: true
+```yml
+- uses: codfish/actions/comment@v3
 ```
 
 ### [npm-pr-version](./npm-publish-pr/)
@@ -67,11 +62,12 @@ OIDC trusted publishing, and automatically comments on PR
 
 **Inputs:**
 
-| Input         | Description                                                                                                    | Required | Default          |
-| ------------- | -------------------------------------------------------------------------------------------------------------- | -------- | ---------------- |
-| `npm-token`   | Registry authentication token with publish permissions. If not provided, OIDC trusted publishing will be used. | No       | -                |
-| `comment`     | Whether to comment on the PR with the published version (true/false)                                           | No       | `true`           |
-| `comment-tag` | Tag to use for PR comments (for comment identification and updates)                                            | No       | `npm-publish-pr` |
+| Input         | Description                                                                                                                                                                                                                        | Required | Default          |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------- |
+| `npm-token`   | Registry authentication token with publish permissions. If not provided, OIDC trusted publishing will be used.                                                                                                                     | No       | -                |
+| `tarball`     | Path to pre-built tarball to publish (e.g., '\*.tgz'). When provided, publishes the tarball with --ignore-scripts for security. Recommended for pull_request_target workflows to prevent execution of malicious lifecycle scripts. | No       | -                |
+| `comment`     | Whether to comment on the PR with the published version (true/false)                                                                                                                                                               | No       | `true`           |
+| `comment-tag` | Tag to use for PR comments (for comment identification and updates)                                                                                                                                                                | No       | `npm-publish-pr` |
 
 **Outputs:**
 
@@ -83,19 +79,25 @@ OIDC trusted publishing, and automatically comments on PR
 
 **Usage:**
 
-```yaml
-permissions:
-  id-token: write
-  pull-requests: write
+```yml
+on: pull_request
 
-steps:
-  - uses: actions/checkout@v6
+jobs:
+  publish:
+    permissions:
+      id-token: write
+      pull-requests: write
 
-  - uses: codfish/actions/setup-node-and-install@v3
+    steps:
+      - uses: actions/checkout@v6
 
-  - run: npm run build
+      - uses: codfish/actions/setup-node-and-install@v3
+        with:
+          node-version: lts/*
 
-  - uses: codfish/actions/npm-pr-version@v3
+      - run: npm run build
+
+      - uses: codfish/actions/npm-pr-version@v3
 ```
 
 ### [setup-node-and-install](./setup-node-and-install/)
@@ -123,19 +125,8 @@ intelligent caching, and version detection via input, .node-version, .nvmrc, or 
 
 **Usage:**
 
-```yaml
-steps:
-  - uses: actions/checkout@v6
-
-  # Will setup node, inferring node version from your codebase & installing your dependencies
-  - uses: codfish/actions/setup-node-and-install@v3
-
-  # Or if you want to be explicit
-  - uses: codfish/actions/setup-node-and-install@v3
-    with:
-      node-version: 24.4
-
-  - run: npm test
+```yml
+- uses: codfish/actions/setup-node-and-install@v3
 ```
 
 <!-- end action docs -->
@@ -151,23 +142,26 @@ Each action follows these conventions:
 
 ## Example Workflow
 
-Complete workflow using multiple actions together with OIDC trusted publishing:
+Complete workflow using multiple actions together with secure OIDC trusted publishing:
 
-```yaml
+```yml
 name: Validate
 
 on: pull_request_target
 
-permissions:
-  id-token: write # For npm trusted publishing to work
-  pull-requests: write # For commenting on PR's
-
 jobs:
-  test-and-publish:
+  # Build and test with untrusted PR code (no secrets)
+  build-and-test:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: codfish/actions/setup-node-and-install@v3
 
@@ -183,21 +177,18 @@ jobs:
           echo "count=$(grep -c "✓\|√\|PASS" test-output.txt || echo "unknown")" >> $GITHUB_OUTPUT
 
       - name: Build package
-        run: pnpm build
-
-      - name: Calculate build size
+        id: build
         run: |
+          pnpm build
+
           if [ -d "dist" ]; then
             size=$(du -sh dist | cut -f1)
           elif [ -d "build" ]; then
             size=$(du -sh build | cut -f1)
-          elif [ -f "package.json" ]; then
-            size=$(du -sh . --exclude=node_modules | cut -f1)
           else
             size="unknown"
           fi
           echo "size=$size" >> $GITHUB_OUTPUT
-        id: build
 
       - uses: codfish/actions/comment@v3
         with:
@@ -212,8 +203,39 @@ jobs:
           tag: 'build-summary'
           upsert: true
 
+      - name: Create package tarball
+        run: pnpm pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-tarball
+          path: '*.tgz'
+          retention-days: 1
+
+  # Publish with secrets using only trusted base branch code
+  publish:
+    needs: build-and-test
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        # No ref = uses base branch (trusted code only)
+
+      - uses: codfish/actions/setup-node-and-install@v3
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+
       - uses: codfish/actions/npm-pr-version@v3
         with:
+          tarball: '*.tgz' # Secure: uses --ignore-scripts
           comment-tag: 'pr-package'
 ```
 

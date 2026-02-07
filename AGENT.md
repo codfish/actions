@@ -112,8 +112,8 @@ Run tests with: `pnpm test`
   - `<!-- start outputs -->` and `<!-- end outputs -->` (action outputs tables)
   - Any other `<!-- ... -->` comment markers - they indicate auto-generated content
 - All content outside these markers is manually maintained and can be edited
-- **Prettier Protection**: Doctoc blocks are wrapped in `<!-- prettier-ignore-start -->` and
-  `<!-- prettier-ignore-end -->` to prevent formatting
+- **Prettier Protection**: Doctoc blocks are wrapped in `<!-- eslint-disable -->` and `<!-- eslint-enable -->` to
+  prevent formatting
 
 ### Workflow Automation
 

@@ -8,7 +8,7 @@ Creates or updates pull request comments with intelligent upsert functionality u
 
 See [action.yml](action.yml).
 
-```yaml
+```yml
 - name: Comment on PR
   uses: codfish/actions/comment@v3
   with:
@@ -33,7 +33,7 @@ See [action.yml](action.yml).
 
 ### Basic comment
 
-```yaml
+```yml
 - uses: codfish/actions/comment@v3
   with:
     message: 'Hello from GitHub Actions! 👋'
@@ -43,7 +43,7 @@ See [action.yml](action.yml).
 
 Use the `upsert` feature to update the same comment instead of creating multiple comments:
 
-```yaml
+```yml
 - name: Update build status
   uses: codfish/actions/comment@v3
   with:
@@ -66,7 +66,7 @@ Use the `upsert` feature to update the same comment instead of creating multiple
 
 ### Multi-line markdown comment
 
-```yaml
+```yml
 - uses: codfish/actions/comment@v3
   with:
     message: |
