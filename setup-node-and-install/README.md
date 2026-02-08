@@ -90,6 +90,7 @@ When multiple version specification methods are present, the action uses this pr
 | `node-version`      | Node.js version to install (e.g. "24", "lts/\*"). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node.                                                           | No       | -       |
 | `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install.                                                                                                                                   | No       | -       |
 | `working-directory` | Directory containing package.json and lockfile.                                                                                                                                                | No       | `.`     |
+| `registry-url`      | Registry URL for npm authentication (e.g. "https://registry.npmjs.org/"). See [Registry URL Configuration](#registry-url-configuration) below.                                                 | No       | -       |
 | `upgrade-npm`       | Whether to upgrade npm to v11.5.1. This is required for OIDC trusted publishing but can be disabled if you want to shave off some run time and you are still using token-based authentication. | No       | `true`  |
 
 <!-- end inputs -->
@@ -113,6 +114,42 @@ This action automatically upgrades npm to **v11** after Node.js setup (pinned to
 
 The upgrade happens transparently and is logged in the workflow output. The version is pinned to prevent unexpected
 breaking changes while still receiving patch and minor updates within v11.
+
+## Registry URL Configuration
+
+The `registry-url` input configures npm authentication by creating a `.npmrc` file with a `NODE_AUTH_TOKEN` placeholder.
+**In most cases, you should NOT set this parameter.**
+
+### When NOT to use registry-url (recommended)
+
+**Skip this parameter if:**
+
+- You're **only installing dependencies** (the primary use case for this action) - authentication is not needed for
+  public packages
+- You're using **semantic-release** for publishing - it handles npm authentication independently and `registry-url` can
+  cause conflicts
+  ([semantic-release docs](https://semantic-release.gitbook.io/semantic-release/recipes/ci-configurations/github-actions#important-avoid-registry-url-in-setup-node))
+- You're using **OIDC trusted publishing** with npm - the upgraded npm v11 handles this automatically
+
+### When to use registry-url
+
+**Only set this parameter if:**
+
+- You're publishing to npm using **manual `npm publish`** (not semantic-release)
+- You need to authenticate to a **private npm registry**
+- You're using **legacy token-based publishing** and need the `.npmrc` file created
+
+### Example with registry-url
+
+```yml
+- uses: codfish/actions/setup-node-and-install@v3
+  with:
+    registry-url: 'https://registry.npmjs.org/'
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+- run: npm publish
+```
 
 ## Examples
 
