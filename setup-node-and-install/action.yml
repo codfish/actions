@@ -16,6 +16,12 @@ inputs:
   working-directory:
     description: Directory containing package.json and lockfile.
     default: .
+  registry-url:
+    description:
+      'Optional registry URL to configure for publishing (e.g. "https://registry.npmjs.org/"). Creates .npmrc with
+      NODE_AUTH_TOKEN placeholder. NOT recommended if using semantic-release (it handles auth independently). Only
+      needed for publishing with manual npm publish or other non-semantic-release workflows.'
+    required: false
   upgrade-npm:
     description:
       Whether to upgrade npm to v11.5.1. This is required for OIDC trusted publishing but can be disabled if you want to
@@ -129,7 +135,7 @@ runs:
         cache: ${{ steps.detect-package-manager.outputs.package-manager }}
         cache-dependency-path: ${{ inputs.working-directory }}
         node-version: ${{ steps.detect-node-version.outputs.version }}
-        registry-url: 'https://registry.npmjs.org/'
+        registry-url: ${{ inputs.registry-url }}
 
     - name: Upgrade npm for OIDC support
       if: inputs.upgrade-npm == 'true'
