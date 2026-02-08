@@ -290,9 +290,6 @@ git diff README.md
 
 Looking for contribution ideas? Here are some actions that would be valuable:
 
-- `slack-notify` - Send Slack notifications
-- `docker-build-push` - Build and push Docker images
-- `semantic-release` - Automated semantic versioning
 - `cache-restore-save` - Advanced caching patterns
 - `monorepo-changed` - Detect changed packages in monorepos
 - `performance-test` - Lighthouse/performance testing
