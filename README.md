@@ -52,7 +52,12 @@ Creates or updates a comment in a pull request with optional tagging for upsert 
 **Usage:**
 
 ```yml
-- uses: codfish/actions/comment@v3
+- name: Comment on PR
+  uses: codfish/actions/comment@v3
+  with:
+    message: '✅ Build successful!'
+    tag: 'build-status'
+    upsert: true
 ```
 
 ### [npm-pr-version](./npm-publish-pr/)
@@ -107,12 +112,13 @@ intelligent caching, and version detection via input, .node-version, .nvmrc, or 
 
 **Inputs:**
 
-| Input               | Description                                                                                                                                                                                    | Required | Default |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
-| `node-version`      | Node.js version to install (e.g. "24", "lts/\*"). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node.                                                           | No       | -       |
-| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install.                                                                                                                                   | No       | -       |
-| `working-directory` | Directory containing package.json and lockfile.                                                                                                                                                | No       | `.`     |
-| `upgrade-npm`       | Whether to upgrade npm to v11.5.1. This is required for OIDC trusted publishing but can be disabled if you want to shave off some run time and you are still using token-based authentication. | No       | `true`  |
+| Input               | Description                                                                                                                                                                                                                                                                                                     | Required | Default |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `node-version`      | Node.js version to install (e.g. "24", "lts/\*"). Precedence: node-version input > .node-version > .nvmrc > package.json volta.node.                                                                                                                                                                            | No       | -       |
+| `install-options`   | Extra command-line options to pass to npm/pnpm/yarn install.                                                                                                                                                                                                                                                    | No       | -       |
+| `working-directory` | Directory containing package.json and lockfile.                                                                                                                                                                                                                                                                 | No       | `.`     |
+| `registry-url`      | Optional registry URL to configure for publishing (e.g. "https://registry.npmjs.org/"). Creates .npmrc with NODE_AUTH_TOKEN placeholder. NOT recommended if using semantic-release (it handles auth independently). Only needed for publishing with manual npm publish or other non-semantic-release workflows. | No       | -       |
+| `upgrade-npm`       | Whether to upgrade npm to v11.5.1. This is required for OIDC trusted publishing but can be disabled if you want to shave off some run time and you are still using token-based authentication.                                                                                                                  | No       | `true`  |
 
 **Outputs:**
 
@@ -126,7 +132,18 @@ intelligent caching, and version detection via input, .node-version, .nvmrc, or 
 **Usage:**
 
 ```yml
-- uses: codfish/actions/setup-node-and-install@v3
+steps:
+  - uses: actions/checkout@v6
+
+  # Will setup node, inferring node version from your codebase & installing your dependencies
+  - uses: codfish/actions/setup-node-and-install@v3
+
+  # Or if you want to be explicit
+  - uses: codfish/actions/setup-node-and-install@v3
+    with:
+      node-version: 24.4
+
+  - run: npm test
 ```
 
 <!-- end action docs -->
