@@ -20,7 +20,7 @@
     "@codfish/eslint-config": "12.3.0",
     "bats": "^1.13.0",
     "doctoc": "^2.2.1",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.0",
     "lint-staged": "^16.2.7",
