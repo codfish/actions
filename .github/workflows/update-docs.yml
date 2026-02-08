@@ -8,10 +8,6 @@ on:
       - '*/README.md'
       - bin/generate-docs.js
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   update-docs:
     name: Auto-update documentation
@@ -21,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       # Dogfood our own setup-node-and-install action
       - name: Setup Node.js and install dependencies
