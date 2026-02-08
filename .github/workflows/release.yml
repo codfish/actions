@@ -43,3 +43,11 @@ jobs:
         uses: docker://ghcr.io/codfish/semantic-release-action@sha256:33086fe34542fd7e01c8efc8f1c57ae5204483d90df9c2c7445dec3db6108050
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update major version tag
+        if: steps.semantic.outputs.new-release-published == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa v${{ steps.semantic.outputs.release-major }} -m "Update v${{ steps.semantic.outputs.release-major }} tag"
+          git push origin v${{ steps.semantic.outputs.release-major }} --force

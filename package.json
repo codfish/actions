@@ -17,7 +17,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@codfish/eslint-config": "^12.2.0",
+    "@codfish/eslint-config": "12.3.0",
     "bats": "^1.13.0",
     "doctoc": "^2.2.1",
     "eslint": "^9.39.2",

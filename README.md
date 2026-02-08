@@ -241,12 +241,16 @@ jobs:
 
 ## Maintenance
 
-> Make the new release available to those binding to the major version tag: Move the major version tag (v3, v4, etc.) to
-> point to the ref of the current release. This will act as the stable release for that major version. You should keep
-> this tag updated to the most recent stable minor/patch release.
+> The release workflow automatically updates the major version tag (v3, v4, v5, etc.) to point to the latest release for
+> that major version. This allows users binding to the major version tag to automatically receive the most recent stable
+> minor/patch releases.
+
+This happens automatically in the [release workflow](.github/workflows/release.yml) after each successful release.
+
+If you need to update the major version tag manually:
 
 ```sh
-git tag -fa v3 -m "Update v3 tag" && git push origin v3 --force
+git tag -fa v5 -m "Update v5 tag" && git push origin v5 --force
 ```
 
 **Reference**: https://github.com/actions/toolkit/blob/main/docs/action-versioning.md#recommendations
