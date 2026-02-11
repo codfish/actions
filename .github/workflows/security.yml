@@ -98,6 +98,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run TruffleHog OSS
-        uses: trufflesecurity/trufflehog@v3.93.1
+        uses: trufflesecurity/trufflehog@v3.93.2
         with:
           extra_args: --debug --only-verified
