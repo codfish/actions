@@ -30,13 +30,13 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@codfish/eslint-config": "12.3.0",
+    "@codfish/eslint-config": "13.1.2",
     "bats": "^1.13.0",
-    "doctoc": "^2.2.1",
-    "eslint": "^9.39.2",
+    "doctoc": "^2.3.0",
+    "eslint": "^10.0.3",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.0",
-    "lint-staged": "^16.2.7",
+    "lint-staged": "^16.3.2",
     "prettier": "^3.8.1"
   },
   "packageManager": "pnpm@10.29.3",
