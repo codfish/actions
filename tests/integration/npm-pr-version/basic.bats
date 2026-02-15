@@ -275,6 +275,58 @@ teardown() {
     assert_output_contains "npm install test-package@0.0.0-PR-123--abc1234" "$(cat output.txt)"
 }
 
+@test "npm-pr-version: success comment includes pnpm, npm, yarn, bun install (dev=false)" {
+    # Simulate success comment message construction (matches action.yml)
+    bash -c '
+        dev_input="false"
+        package_name="test-pkg"
+        version="0.0.0-PR-99--abc1234"
+        # Same logic as action: dev flag for each package manager
+        [ "$dev_input" = "true" ] && pnpm_cmd="pnpm add -D " || pnpm_cmd="pnpm add "
+        [ "$dev_input" = "true" ] && npm_cmd="npm install -D " || npm_cmd="npm install "
+        [ "$dev_input" = "true" ] && yarn_cmd="yarn add -D " || yarn_cmd="yarn add "
+        [ "$dev_input" = "true" ] && bun_cmd="bun add -d " || bun_cmd="bun add "
+        echo "Install block:"
+        echo "  ${pnpm_cmd}${package_name}@${version}"
+        echo "  ${npm_cmd}${package_name}@${version}"
+        echo "  ${yarn_cmd}${package_name}@${version}"
+        echo "  ${bun_cmd}${package_name}@${version}"
+    ' > output.txt
+
+    out=$(cat output.txt)
+    assert_output_contains "pnpm add test-pkg@0.0.0-PR-99--abc1234" "$out"
+    assert_output_contains "npm install test-pkg@0.0.0-PR-99--abc1234" "$out"
+    assert_output_contains "yarn add test-pkg@0.0.0-PR-99--abc1234" "$out"
+    assert_output_contains "bun add test-pkg@0.0.0-PR-99--abc1234" "$out"
+    refute_output_contains "pnpm add -D" "$out"
+    refute_output_contains "npm install -D" "$out"
+    refute_output_contains "yarn add -D" "$out"
+    refute_output_contains "bun add -d" "$out"
+}
+
+@test "npm-pr-version: success comment includes dev flags when dev=true" {
+    # Simulate success comment with dev=true (matches action.yml)
+    bash -c '
+        dev_input="true"
+        package_name="my-lib"
+        version="0.0.0-PR-42--deadbeef"
+        [ "$dev_input" = "true" ] && pnpm_cmd="pnpm add -D " || pnpm_cmd="pnpm add "
+        [ "$dev_input" = "true" ] && npm_cmd="npm install -D " || npm_cmd="npm install "
+        [ "$dev_input" = "true" ] && yarn_cmd="yarn add -D " || yarn_cmd="yarn add "
+        [ "$dev_input" = "true" ] && bun_cmd="bun add -d " || bun_cmd="bun add "
+        echo "${pnpm_cmd}${package_name}@${version}"
+        echo "${npm_cmd}${package_name}@${version}"
+        echo "${yarn_cmd}${package_name}@${version}"
+        echo "${bun_cmd}${package_name}@${version}"
+    ' > output.txt
+
+    out=$(cat output.txt)
+    assert_output_contains "pnpm add -D my-lib@0.0.0-PR-42--deadbeef" "$out"
+    assert_output_contains "npm install -D my-lib@0.0.0-PR-42--deadbeef" "$out"
+    assert_output_contains "yarn add -D my-lib@0.0.0-PR-42--deadbeef" "$out"
+    assert_output_contains "bun add -d my-lib@0.0.0-PR-42--deadbeef" "$out"
+}
+
 @test "npm-pr-version: error handling and comment update" {
     # Test error handling workflow
     bash -c '
