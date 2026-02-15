@@ -57,6 +57,18 @@ runs:
         version=""
         package_manager="npm"
         tarball_mode=false
+        NPMRC_AUTH_FILE=""
+        REPACK_DIR=""
+
+        # Clean up on exit: remove temp auth file (never touch project .npmrc), temp files, repack dir
+        cleanup() {
+          local exit_code=$?
+          [ -n "$NPMRC_AUTH_FILE" ] && rm -f "$NPMRC_AUTH_FILE" 2>/dev/null || true
+          [ -n "$temp_pkg_json" ] && rm -f "$temp_pkg_json" 2>/dev/null || true
+          [ -n "$REPACK_DIR" ] && rm -rf "$REPACK_DIR" 2>/dev/null || true
+          return $exit_code
+        }
+        trap cleanup EXIT
 
         # Detect if tarball mode is being used
         if [ -n "$INPUT_TARBALL" ]; then
@@ -115,7 +127,7 @@ runs:
           exit 1
         }
 
-        # In tarball mode, extract package info from tarball
+        # In tarball mode: unpack, inject PR version, repack (so we publish a unique version)
         # In normal mode, validate package.json
         if [ "$tarball_mode" = true ]; then
           # Validate tarball exists
@@ -126,25 +138,21 @@ runs:
             exit 1
           fi
 
-          echo "📦 Extracting package info from tarball: $INPUT_TARBALL"
+          echo "📦 Unpacking tarball and injecting PR version: $INPUT_TARBALL"
 
-          # Create secure temporary file with proper permissions
-          temp_pkg_json=$(mktemp)
-          trap 'rm -f "$temp_pkg_json"' EXIT
+          # Unpack to temp dir (npm pack format: top-level "package/" with package.json inside)
+          repack_dir=$(mktemp -d)
+          REPACK_DIR="$repack_dir"
+          tar -xzf "$INPUT_TARBALL" -C "$repack_dir"
 
-          # Extract package.json from tarball to get name and version
-          # Note: Use -O without --wildcards for BSD tar (macOS) compatibility
-          tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
-
-          if [ ! -s "$temp_pkg_json" ]; then
-            error_message="❌ ERROR: Could not extract package.json from tarball"
+          if [ ! -f "$repack_dir/package/package.json" ]; then
+            error_message="❌ ERROR: Could not extract package.json from tarball (expected package/package.json)"
             echo "$error_message"
             echo "error-message=$error_message" >> $GITHUB_OUTPUT
             exit 1
           fi
 
-          # Get package name from tarball
-          package_name=$(jq -r '.name // empty' "$temp_pkg_json")
+          package_name=$(jq -r '.name // empty' "$repack_dir/package/package.json")
           if [ -z "$package_name" ] || [ "$package_name" = "null" ]; then
             error_message="❌ ERROR: Tarball's package.json must have a 'name' field"
             echo "$error_message"
@@ -152,16 +160,15 @@ runs:
             exit 1
           fi
 
-          # Get version from tarball
-          version=$(jq -r '.version // empty' "$temp_pkg_json")
-          if [ -z "$version" ] || [ "$version" = "null" ]; then
-            error_message="❌ ERROR: Tarball's package.json must have a 'version' field"
-            echo "$error_message"
-            echo "error-message=$error_message" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+          # Generate PR-specific version (same format as normal mode) so we don't overwrite published versions
+          version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
+          jq --arg v "$version" '.version = $v' "$repack_dir/package/package.json" > "$repack_dir/package/package.json.tmp" && mv "$repack_dir/package/package.json.tmp" "$repack_dir/package/package.json"
 
-          echo "📦 Tarball package: $package_name@$version"
+          # Repack for publish (still secure: --ignore-scripts used when publishing)
+          (cd "$repack_dir" && tar -czf repack.tgz package)
+          TARBALL_TO_PUBLISH="$repack_dir/repack.tgz"
+
+          echo "📦 Tarball package: $package_name@$version (PR version)"
           echo "package-name=$package_name" >> $GITHUB_OUTPUT
           echo "version=$version" >> $GITHUB_OUTPUT
         else
@@ -210,8 +217,12 @@ runs:
         if [ "$INPUT_NPM_TOKEN" ]; then
           echo "🔐 Using token-based authentication"
 
-          # Token mode: set NODE_AUTH_TOKEN so publishing works
+          # Token mode: use a temp userconfig file so we never overwrite or delete the project's .npmrc.
+          # npm merges NPM_CONFIG_USERCONFIG with project .npmrc, so custom registry/scoped config is preserved.
           export NODE_AUTH_TOKEN="$INPUT_NPM_TOKEN"
+          NPMRC_AUTH_FILE=$(mktemp)
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > "$NPMRC_AUTH_FILE"
+          export NPM_CONFIG_USERCONFIG="$NPMRC_AUTH_FILE"
 
           # Detect package manager for token-based publishing
           if [ -f "./yarn.lock" ]; then
@@ -247,12 +258,12 @@ runs:
 
         # Publish package
         if [ "$tarball_mode" = true ]; then
-          # SECURE TARBALL MODE: Publish pre-built tarball with --ignore-scripts
+          # SECURE TARBALL MODE: Publish repacked tarball (PR version injected) with --ignore-scripts
           echo "🔒 Publishing tarball with --ignore-scripts (secure mode)"
 
           if [ -z "$INPUT_NPM_TOKEN" ]; then
             # OIDC mode with tarball
-            publish_output=$(npm publish "$INPUT_TARBALL" --access public --tag pr --provenance --ignore-scripts 2>&1)
+            publish_output=$(npm publish "$TARBALL_TO_PUBLISH" --access public --tag pr --provenance --ignore-scripts 2>&1)
             publish_exit_code=$?
 
             if [ $publish_exit_code -ne 0 ]; then
@@ -261,7 +272,7 @@ runs:
             echo "✅ Successfully published $package_name@$version using OIDC (secure tarball mode)"
           else
             # Token mode with tarball - always use npm for tarball publishing
-            publish_output=$(npm publish "$INPUT_TARBALL" --access public --tag pr --ignore-scripts 2>&1)
+            publish_output=$(npm publish "$TARBALL_TO_PUBLISH" --access public --tag pr --ignore-scripts 2>&1)
             publish_exit_code=$?
 
             if [ $publish_exit_code -ne 0 ]; then
