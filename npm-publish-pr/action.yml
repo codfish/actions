@@ -57,6 +57,14 @@ runs:
         version=""
         package_manager="npm"
         tarball_mode=false
+        CREATED_NPMRC=""
+
+        # Clean up on exit: remove .npmrc if we created it, and temp_pkg_json if used (tarball mode)
+        cleanup() {
+          [ -n "$CREATED_NPMRC" ] && rm -f .npmrc
+          [ -n "$temp_pkg_json" ] && rm -f "$temp_pkg_json"
+        }
+        trap cleanup EXIT
 
         # Detect if tarball mode is being used
         if [ -n "$INPUT_TARBALL" ]; then
@@ -128,9 +136,8 @@ runs:
 
           echo "📦 Extracting package info from tarball: $INPUT_TARBALL"
 
-          # Create secure temporary file with proper permissions
+          # Create secure temporary file with proper permissions (cleaned up by EXIT trap)
           temp_pkg_json=$(mktemp)
-          trap 'rm -f "$temp_pkg_json"' EXIT
 
           # Extract package.json from tarball to get name and version
           # Note: Use -O without --wildcards for BSD tar (macOS) compatibility
@@ -210,8 +217,11 @@ runs:
         if [ "$INPUT_NPM_TOKEN" ]; then
           echo "🔐 Using token-based authentication"
 
-          # Token mode: set NODE_AUTH_TOKEN so publishing works
+          # Token mode: set NODE_AUTH_TOKEN and ensure .npmrc exists so npm uses it.
+          # npm only uses NODE_AUTH_TOKEN when .npmrc references it (e.g. for tarball publish or when no .npmrc exists).
           export NODE_AUTH_TOKEN="$INPUT_NPM_TOKEN"
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > .npmrc
+          CREATED_NPMRC=1
 
           # Detect package manager for token-based publishing
           if [ -f "./yarn.lock" ]; then
