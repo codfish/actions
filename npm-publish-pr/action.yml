@@ -22,6 +22,10 @@ inputs:
     required: false
     default: npm-publish-pr
     description: Tag to use for PR comments (for comment identification and updates)
+  dev:
+    required: false
+    default: 'false'
+    description: If true, use dev dependency install syntax in the PR comment (e.g. npm install -D, pnpm add -D).
 
 outputs:
   version:
@@ -348,7 +352,10 @@ runs:
 
           Install:
 
-              npm install ${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}
+              ${{ inputs.dev == 'true' && 'pnpm add -D ' || 'pnpm add ' }}${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}
+              ${{ inputs.dev == 'true' && 'npm install -D ' || 'npm install ' }}${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}
+              ${{ inputs.dev == 'true' && 'yarn add -D ' || 'yarn add ' }}${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}
+              ${{ inputs.dev == 'true' && 'bun add -d ' || 'bun add ' }}${{ steps.publish.outputs.package-name }}@${{ steps.publish.outputs.version }}
 
           View on npm: https://www.npmjs.com/package/${{ steps.publish.outputs.package-name }}/v/${{ steps.publish.outputs.version }}
         upsert: true
