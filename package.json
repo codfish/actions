@@ -5,7 +5,20 @@
   "author": "Chris O'Donnell <chris@codfish.dev>",
   "license": "MIT",
   "version": "0.0.0-semantically-released",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codfish/actions.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "comment",
+    "npm-publish-pr",
+    "setup-node-and-install",
+    "bin",
+    "README.md"
+  ],
   "scripts": {
     "lint": "eslint .",
     "fix": "eslint . --fix",

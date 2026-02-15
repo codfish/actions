@@ -1,0 +1,61 @@
+name: Publish PR Version
+
+on: pull_request_target
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node and install dependencies
+        uses: ./setup-node-and-install
+        with:
+          node-version: lts/*
+
+      - name: Build package
+        run: pnpm run build --if-present
+
+      - name: Create package tarball
+        run: pnpm pack
+
+      - name: Upload package tarball
+        uses: actions/upload-artifact@v6
+        with:
+          name: package-tarball
+          path: '*.tgz'
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # To checkout base branch
+      pull-requests: write # To comment on PR
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: ./setup-node-and-install
+        with:
+          node-version: lts/*
+
+      - name: Download package tarball
+        uses: actions/download-artifact@v7
+        with:
+          name: package-tarball
+
+      - name: Publish PR package
+        uses: ./npm-publish-pr
+        with:
+          tarball: '*.tgz'
+          npm-token: ${{ secrets.NPM_TOKEN }}
+          dev: true
