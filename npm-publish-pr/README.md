@@ -267,6 +267,7 @@ The package is published under the `pr` tag, so it won't interfere with your reg
 | `tarball`     | Path to pre-built tarball to publish (e.g., '\*.tgz'). When provided, publishes the tarball with --ignore-scripts for security. Recommended for pull_request_target workflows to prevent execution of malicious lifecycle scripts. | No       | -                |
 | `comment`     | Whether to comment on the PR with the published version (true/false)                                                                                                                                                               | No       | `true`           |
 | `comment-tag` | Tag to use for PR comments (for comment identification and updates)                                                                                                                                                                | No       | `npm-publish-pr` |
+| `dev`         | If true, use dev dependency install syntax in the PR comment (e.g. npm install -D, pnpm add -D).                                                                                                                                   | No       | `false`          |
 
 <!-- end inputs -->
 
