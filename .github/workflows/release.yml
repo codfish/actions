@@ -51,7 +51,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v${{ steps.semantic.outputs.release-major }}"
-          SHA="${{ steps.semantic.outputs.release-sha }}"
+          SHA="${{ steps.semantic.outputs.git-head }}"
 
           # Update or create the major version tag using GitHub API
           gh api --method POST /repos/${{ github.repository }}/git/refs \
