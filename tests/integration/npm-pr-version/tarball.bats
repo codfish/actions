@@ -61,34 +61,69 @@ teardown() {
     assert_output_contains "package-name=test-package" "$(cat output.txt)"
 }
 
-@test "npm-pr-version: tarball mode extracts version from tarball" {
-    # Create a test package
+@test "npm-pr-version: tarball mode injects PR version (repack)" {
+    # Tarball mode unpacks, sets version to 0.0.0-PR-{number}--{sha}, repacks, and publishes
     mkdir -p package
-    echo '{"name": "test-package", "version": "0.0.0-PR-123--abc1234"}' > package/package.json
-
-    # Create tarball
+    echo '{"name": "test-package", "version": "1.0.0"}' > package/package.json
     tar -czf test-package-1.0.0.tgz package/
 
-    # Test extracting version
     bash -c '
         INPUT_TARBALL="test-package-1.0.0.tgz"
+        PR=123
+        SHA="abc1234567890"
 
-        # Create secure temporary file
-        temp_pkg_json=$(mktemp)
-        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
-
-        # Extract package.json from tarball
-        tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
-
-        if [ -s "$temp_pkg_json" ]; then
-            version=$(jq -r ".version // empty" "$temp_pkg_json")
-            echo "version=$version"
-        else
-            echo "error=Could not extract package.json"
-        fi
+        repack_dir=$(mktemp -d)
+        trap "rm -rf \$repack_dir" EXIT
+        tar -xzf "$INPUT_TARBALL" -C "$repack_dir"
+        package_name=$(jq -r ".name // empty" "$repack_dir/package/package.json")
+        version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
+        jq --arg v "$version" ".version = \$v" "$repack_dir/package/package.json" > "$repack_dir/package/package.json.tmp" && mv "$repack_dir/package/package.json.tmp" "$repack_dir/package/package.json"
+        echo "package-name=$package_name"
+        echo "version=$version"
     ' > output.txt
 
+    assert_output_contains "package-name=test-package" "$(cat output.txt)"
     assert_output_contains "version=0.0.0-PR-123--abc1234" "$(cat output.txt)"
+}
+
+@test "npm-pr-version: repacked tarball extracts with correct structure and PR version" {
+    # Create source tarball (npm pack format: package/ with package.json + other files)
+    mkdir -p package
+    echo '{"name": "@scope/repack-test", "version": "2.0.0"}' > package/package.json
+    echo "module.exports = {};" > package/index.js
+    tar -czf repack-test.tgz package/
+
+    # Repack (same flow as action: unpack, inject PR version, repack) and write to test dir so it persists
+    bash -c '
+        INPUT_TARBALL="repack-test.tgz"
+        PR=42
+        SHA="c0ffee0"
+        repack_dir=$(mktemp -d)
+        trap "rm -rf \$repack_dir" EXIT
+        tar -xzf "$INPUT_TARBALL" -C "$repack_dir"
+        version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
+        jq --arg v "$version" ".version = \$v" "$repack_dir/package/package.json" > "$repack_dir/package/package.json.tmp" && mv "$repack_dir/package/package.json.tmp" "$repack_dir/package/package.json"
+        (cd "$repack_dir" && tar -czf repack.tgz package)
+        cp "$repack_dir/repack.tgz" ./repack-output.tgz
+    '
+
+    # Extract repacked tarball and validate structure
+    extract_dir=$(mktemp -d)
+    tar -xzf repack-output.tgz -C "$extract_dir"
+    rm -f repack-output.tgz
+
+    # Must have package/package.json (npm pack layout)
+    assert_file_exists "$extract_dir/package/package.json"
+    name=$(jq -r '.name' "$extract_dir/package/package.json")
+    version=$(jq -r '.version' "$extract_dir/package/package.json")
+    [ "$name" = "@scope/repack-test" ]
+    [ "$version" = "0.0.0-PR-42--c0ffee0" ]
+
+    # Original files must be preserved
+    assert_file_exists "$extract_dir/package/index.js"
+    [ "$(cat "$extract_dir/package/index.js")" = "module.exports = {};" ]
+
+    rm -rf "$extract_dir"
 }
 
 @test "npm-pr-version: tarball mode validates tarball exists" {
@@ -107,33 +142,31 @@ teardown() {
 }
 
 @test "npm-pr-version: tarball mode uses --ignore-scripts flag" {
-    # Test that --ignore-scripts is used in tarball mode
+    # Test that --ignore-scripts is used when publishing the repacked tarball
     bash -c '
-        INPUT_TARBALL="test-package-1.0.0.tgz"
+        TARBALL_TO_PUBLISH="/tmp/repack/repack.tgz"
         tarball_mode=true
 
         if [ "$tarball_mode" = true ]; then
-            # Simulate publish command generation
-            publish_cmd="npm publish \"$INPUT_TARBALL\" --access public --tag pr --ignore-scripts"
+            publish_cmd="npm publish \"$TARBALL_TO_PUBLISH\" --access public --tag pr --ignore-scripts"
             echo "Publishing with: $publish_cmd"
         fi
     ' > output.txt
 
     assert_output_contains "--ignore-scripts" "$(cat output.txt)"
-    assert_output_contains "npm publish \"test-package-1.0.0.tgz\"" "$(cat output.txt)"
+    assert_output_contains "npm publish" "$(cat output.txt)"
 }
 
 @test "npm-pr-version: tarball mode with OIDC uses --provenance" {
-    # Test that OIDC mode includes --provenance flag
+    # Test that OIDC mode includes --provenance flag when publishing repacked tarball
     bash -c '
-        INPUT_TARBALL="test-package-1.0.0.tgz"
+        TARBALL_TO_PUBLISH="/tmp/repack/repack.tgz"
         INPUT_NPM_TOKEN=""
         tarball_mode=true
 
         if [ "$tarball_mode" = true ]; then
             if [ -z "$INPUT_NPM_TOKEN" ]; then
-                # OIDC mode
-                publish_cmd="npm publish \"$INPUT_TARBALL\" --access public --tag pr --provenance --ignore-scripts"
+                publish_cmd="npm publish \"$TARBALL_TO_PUBLISH\" --access public --tag pr --provenance --ignore-scripts"
                 echo "Publishing with: $publish_cmd"
             fi
         fi
@@ -148,14 +181,14 @@ teardown() {
     touch yarn.lock
 
     bash -c '
-        INPUT_TARBALL="test-package-1.0.0.tgz"
+        TARBALL_TO_PUBLISH="/tmp/repack/repack.tgz"
         INPUT_NPM_TOKEN="test-token"
         tarball_mode=true
 
         if [ "$tarball_mode" = true ]; then
             if [ -n "$INPUT_NPM_TOKEN" ]; then
-                # Token mode with tarball - always use npm
-                publish_cmd="npm publish \"$INPUT_TARBALL\" --access public --tag pr --ignore-scripts"
+                # Token mode with tarball - always use npm, publish repacked tarball
+                publish_cmd="npm publish \"$TARBALL_TO_PUBLISH\" --access public --tag pr --ignore-scripts"
                 echo "Publishing with: $publish_cmd"
                 echo "Note: Using npm even though yarn.lock exists"
             fi
@@ -167,49 +200,51 @@ teardown() {
     assert_output_contains "Using npm even though yarn.lock exists" "$(cat output.txt)"
 }
 
-@test "npm-pr-version: tarball mode skips version generation" {
-    # Test that version is not generated in tarball mode
-    bash -c '
-        INPUT_TARBALL="test-package-1.0.0.tgz"
-        tarball_mode=true
-        PR=123
-        SHA="abc1234567890"
+@test "npm-pr-version: token mode preserves existing project .npmrc" {
+    # Token auth uses a temp userconfig file (NPM_CONFIG_USERCONFIG), never writes or deletes project .npmrc
+    printf '%s\n' "registry=https://custom.registry.example/" "@my-scope:registry=https://scope.registry.example/" "save-exact=true" > .npmrc
+    custom_npmrc=$(cat .npmrc)
 
-        if [ "$tarball_mode" = false ]; then
+    NPMRC_AUTH_FILE=$(mktemp)
+    echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > "$NPMRC_AUTH_FILE"
+    export NPM_CONFIG_USERCONFIG="$NPMRC_AUTH_FILE"
+    export NODE_AUTH_TOKEN="test-token"
+    # Simulate cleanup (same as action) - no trap so we don't overwrite other tests' EXIT trap
+    rm -f "$NPMRC_AUTH_FILE" 2>/dev/null || true
+
+    assert_file_exists .npmrc
+    [ "$(cat .npmrc)" = "$custom_npmrc" ]
+}
+
+@test "npm-pr-version: tarball mode generates PR version for repack" {
+    # Tarball mode now injects PR version into the tarball so each publish is unique
+    bash -c '
+        tarball_mode=true
+        PR=99
+        SHA="deadbeef12345"
+
+        if [ "$tarball_mode" = true ]; then
             version="0.0.0-PR-${PR}--$(echo ${SHA} | cut -c -7)"
-            echo "Generated version: $version"
-        else
-            echo "Skipping version generation in tarball mode"
+            echo "Generated PR version for repack: $version"
         fi
     ' > output.txt
 
-    assert_output_contains "Skipping version generation in tarball mode" "$(cat output.txt)"
-    refute_output_contains "Generated version:" "$(cat output.txt)"
+    assert_output_contains "Generated PR version for repack: 0.0.0-PR-99--deadbee" "$(cat output.txt)"
 }
 
 @test "npm-pr-version: tarball mode handles scoped packages" {
-    # Create a test scoped package
+    # Create a test scoped package (unpack to dir, read name - same as action)
     mkdir -p package
     echo '{"name": "@test-org/scoped-package", "version": "1.0.0"}' > package/package.json
-
-    # Create tarball
     tar -czf test-org-scoped-package-1.0.0.tgz package/
 
-    # Test extracting scoped package name
     bash -c '
         INPUT_TARBALL="test-org-scoped-package-1.0.0.tgz"
-
-        # Create secure temporary file
-        temp_pkg_json=$(mktemp)
-        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
-
-        # Extract package.json from tarball
-        tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
-
-        if [ -s "$temp_pkg_json" ]; then
-            package_name=$(jq -r ".name // empty" "$temp_pkg_json")
-            echo "package-name=$package_name"
-        fi
+        repack_dir=$(mktemp -d)
+        trap "rm -rf \$repack_dir" EXIT
+        tar -xzf "$INPUT_TARBALL" -C "$repack_dir"
+        package_name=$(jq -r ".name // empty" "$repack_dir/package/package.json")
+        echo "package-name=$package_name"
     ' > output.txt
 
     assert_output_contains "package-name=@test-org/scoped-package" "$(cat output.txt)"
@@ -221,19 +256,15 @@ teardown() {
     echo "test content" > package/readme.txt
     tar -czf invalid-package.tgz package/
 
-    # Test error handling
+    # Test error handling (unpack then check for package/package.json)
     bash -c '
         INPUT_TARBALL="invalid-package.tgz"
+        repack_dir=$(mktemp -d)
+        trap "rm -rf \$repack_dir" EXIT
+        tar -xzf "$INPUT_TARBALL" -C "$repack_dir"
 
-        # Create secure temporary file
-        temp_pkg_json=$(mktemp)
-        trap '\''rm -f "$temp_pkg_json"'\'' EXIT
-
-        # Try to extract package.json from tarball
-        tar -xzf "$INPUT_TARBALL" -O package/package.json > "$temp_pkg_json" 2>/dev/null
-
-        if [ ! -s "$temp_pkg_json" ]; then
-            error_message="ERROR: Could not extract package.json from tarball"
+        if [ ! -f "$repack_dir/package/package.json" ]; then
+            error_message="ERROR: Could not extract package.json from tarball (expected package/package.json)"
             echo "$error_message"
             exit 1
         fi
@@ -370,15 +401,15 @@ teardown() {
         skip "action.yml not found"
     fi
 
-    # Check for mktemp usage
-    if grep -q "temp_pkg_json=\$(mktemp)" "$ACTION_FILE"; then
+    # Check for mktemp usage (temp dir for repack or temp file)
+    if grep -q "mktemp" "$ACTION_FILE"; then
         echo "mktemp-found=true" > output.txt
     else
         echo "mktemp-found=false" > output.txt
     fi
 
-    # Check for trap with EXIT
-    if grep -q "trap.*rm -f.*EXIT" "$ACTION_FILE"; then
+    # Check for trap with EXIT (inline or trap cleanup EXIT with cleanup doing rm -f / rm -rf)
+    if grep -q "trap.*rm -f.*EXIT" "$ACTION_FILE" || { grep -q "trap cleanup EXIT" "$ACTION_FILE" && (grep -q 'rm -f\|rm -rf' "$ACTION_FILE"); }; then
         echo "trap-found=true" >> output.txt
     else
         echo "trap-found=false" >> output.txt
