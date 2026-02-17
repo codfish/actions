@@ -20,7 +20,7 @@ jobs:
           node-version: lts/*
 
       - name: Build package
-        run: pnpm run build --if-present
+        run: pnpm run --if-present build
 
       - name: Create package tarball
         run: pnpm pack
