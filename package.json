@@ -20,9 +20,8 @@
     "README.md"
   ],
   "scripts": {
-    "lint": "eslint .",
-    "fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{json,css,md,yml}\" --config ./node_modules/@codfish/eslint-config/prettier.js",
+    "lint": "eslint",
+    "format": "eslint --fix",
     "test": "bash tests/scripts/test-runner.sh",
     "test:integration": "bash tests/scripts/test-runner.sh integration",
     "test:unit": "bash tests/scripts/test-runner.sh unit",
@@ -30,13 +29,13 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@codfish/eslint-config": "12.3.0",
+    "@codfish/eslint-config": "13.1.2",
     "bats": "^1.13.0",
-    "doctoc": "^2.2.1",
-    "eslint": "^9.39.2",
+    "doctoc": "^2.3.0",
+    "eslint": "^10.0.3",
     "husky": "^9.1.7",
     "js-yaml": "^4.1.0",
-    "lint-staged": "^16.2.7",
+    "lint-staged": "^16.3.2",
     "prettier": "^3.8.1"
   },
   "packageManager": "pnpm@10.29.3",
@@ -53,5 +52,15 @@
       "prettier --write --config ./node_modules/@codfish/eslint-config/prettier.js",
       "doctoc --title '## Table of Contents'"
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "ajv@>=7.0.0-alpha.0 <8.18.0": ">=8.18.0",
+      "minimatch@<3.1.3": ">=3.1.3",
+      "minimatch@<3.1.4": ">=3.1.4",
+      "minimatch@>=9.0.0 <9.0.6": ">=9.0.6",
+      "minimatch@>=9.0.0 <9.0.7": ">=9.0.7",
+      "underscore@<=1.13.7": ">=1.13.8"
+    }
   }
 }
