@@ -20,9 +20,8 @@
     "README.md"
   ],
   "scripts": {
-    "lint": "eslint .",
-    "fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{json,css,md,yml}\" --config ./node_modules/@codfish/eslint-config/prettier.js",
+    "lint": "eslint",
+    "format": "eslint --fix",
     "test": "bash tests/scripts/test-runner.sh",
     "test:integration": "bash tests/scripts/test-runner.sh integration",
     "test:unit": "bash tests/scripts/test-runner.sh unit",
