@@ -83,7 +83,7 @@ runs:
 
     - name: Install pnpm
       if: steps.detect-package-manager.outputs.package-manager == 'pnpm'
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v5
       id: pnpm-setup
       with:
         run_install: false
