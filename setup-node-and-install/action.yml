@@ -26,7 +26,7 @@ inputs:
     description:
       Whether to upgrade npm to v11.5.1. This is required for OIDC trusted publishing but can be disabled if you want to
       shave off some run time and you are still using token-based authentication.
-    default: true
+    default: false
 
 outputs:
   node-version:
