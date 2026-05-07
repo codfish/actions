@@ -83,7 +83,7 @@ runs:
 
     - name: Install pnpm
       if: steps.detect-package-manager.outputs.package-manager == 'pnpm'
-      uses: pnpm/action-setup@v5
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
       id: pnpm-setup
       with:
         run_install: false
@@ -128,7 +128,7 @@ runs:
         INPUT_NODE_VERSION: ${{ inputs.node-version }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
       id: setup-node
       with:
         # use detected package manager cache
@@ -156,7 +156,7 @@ runs:
       if:
         steps.detect-package-manager.outputs.lockfile-exists == 'true' &&
         steps.detect-package-manager.outputs.package-manager == 'npm'
-      uses: actions/cache@v5
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
       id: cache
       with:
         path: ${{ inputs.working-directory }}/node_modules
