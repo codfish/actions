@@ -42,7 +42,7 @@ runs:
   using: composite
 
   steps:
-    - uses: codfish/actions/comment@a5d670e3eacf83aa1e1f906b86b04b8215c17e99 # v3
+    - uses: codfish/actions/comment@1b3543a33a4923d92511236b76a5708b433a2f61 # v4
       if: inputs.comment == 'true'
       with:
         message: ⏳ Publishing PR version...
@@ -332,7 +332,7 @@ runs:
         PR: ${{ github.event.number }}
         SHA: ${{ github.event.pull_request.head.sha }}
 
-    - uses: codfish/actions/comment@a5d670e3eacf83aa1e1f906b86b04b8215c17e99 # v3
+    - uses: codfish/actions/comment@1b3543a33a4923d92511236b76a5708b433a2f61 # v4
       if: failure() && inputs.comment == 'true'
       with:
         message: |
@@ -344,7 +344,7 @@ runs:
         upsert: true
         tag: ${{ inputs.comment-tag }}
 
-    - uses: codfish/actions/comment@a5d670e3eacf83aa1e1f906b86b04b8215c17e99 # v3
+    - uses: codfish/actions/comment@1b3543a33a4923d92511236b76a5708b433a2f61 # v4
       if: success() && inputs.comment == 'true'
       with:
         message: |
